@@ -1,23 +1,14 @@
-import os
-
-os.environ["MKL_NUM_THREADS"] = "1" 
-os.environ["NUMEXPR_NUM_THREADS"] = "1" 
-os.environ["OMP_NUM_THREADS"] = "1" 
-
 import warnings
 import numpy as np
 import pandas as pd
-from tqdm.auto import tqdm
 from math import ceil
 import multiprocessing
+from tqdm.auto import tqdm
 from copy import deepcopy as copy
 from joblib import delayed, Parallel
 from scipy.stats import mode, entropy
 from sklearn.metrics import roc_auc_score
 
-os.environ["MKL_NUM_THREADS"] = "1" 
-os.environ["NUMEXPR_NUM_THREADS"] = "1" 
-os.environ["OMP_NUM_THREADS"] = "1" 
 
 class BiasConstraintDecisionTreeClassifier():
     def __init__(self,
