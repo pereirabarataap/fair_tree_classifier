@@ -27,30 +27,6 @@ class FairDecisionTreeClassifier():
         self.bootstrap = bootstrap
         self.random_state = random_state        
         self.compound_bias_method = compound_bias_method
-        
-    
-#         if self.criterion not in ["entropy", "auc_sub", "faht", "ig", "fg", "kamiran_add", "kamiran_div", "kamiran_sub"]:
-#             self.criterion = "auc_sub"
-#             warnings.warn("criterion undefined -> setting criterion to auc")
-#         if (self.bias_method != "avg") and (self.bias_method != "w_avg") and (self.bias_method != "xtr"):
-#             self.bias_method = "avg"
-#             warnings.warn("bias_method undefined -> setting bias_method to avg")
-#         if (self.compound_bias_method != "avg") and (self.compound_bias_method != "xtr"):
-#             self.compound_bias_method = "avg"
-#             warnings.warn("compound_bias_method undefined -> setting compound_bias_method to avg")
-            
-#         if "int" not in str(type(self.n_bins)):
-#             raise Exception("n_bins must be an int, not " + str(type(self.n_bins)))
-#         if "int" not in str(type(self.min_leaf)):
-#             raise Exception("min_leaf must be an int, not " + str(type(self.min_leaf)))
-#         if "int" not in str(type(self.max_depth)):
-#             raise Exception("max_depth must be an int, not " + str(type(self.max_depth)))
-#         if ("int" not in str(type(self.n_samples))) and ("float" not in str(type(self.n_samples))):
-#             raise Exception("n_samples must be an int or float, not " + str(type(self.n_samples)))
-# #         if ("int" not in str(type(self.max_features))) and ("float" not in str(type(self.max_features))):
-# #             raise Exception("max_features must be an int or float, not " + str(type(self.max_features)))
-#         if ("int" not in str(type(self.orthogonality))) and ("float" not in str(type(self.orthogonality))):
-#             raise Exception("orthogonality must be an int or float, not " + str(type(self.orthogonality)))
                                 
     def fit(self, X="X", y="y", b="bias"):
         """
@@ -428,11 +404,7 @@ class FairDecisionTreeClassifier():
                 fg = abs(disc) - (
                     (n_left/n)*abs(disc_left) + (n_right/n)*abs(disc_right)
                 )
-#                 print(fg)
-#                 if (fg==0):
-#                     fg = 1 # FIG=IG*FG, and when FG=0, authors state FIG=IG --> FG=1 since FIG=IG*FG -> FIG=IG
-#                 if np.isnan(fg):
-#                     fg = 0
+                
                 if np.isnan(fg):
                     fg = -np.inf
                 score = fg # fairness gain
@@ -521,9 +493,7 @@ class FairDecisionTreeClassifier():
             return best_score, best_feature, best_split_value
         
         # recursively grow the actual tree ---> {split1: {...}}
-        def build_tree(indexs, step=0, old_score=-np.inf, new_score=-np.inf):
-            ##print(indexs)
-            
+        def build_tree(indexs, step=0, old_score=-np.inf, new_score=-np.inf):     
             step = copy(step)
             indexs = copy(indexs)
             tree={}
@@ -539,16 +509,10 @@ class FairDecisionTreeClassifier():
                 score, feature, split_value = get_best_split(indexs)
                 old_score = copy(new_score)
                 new_score = copy(score)
-                #print(new_score)
+                
                 if new_score==-np.inf: ## in case no more feature values exist for splitting
                     return indexs
                 
-#                 if (self.criterion=="auc_sub") and (new_score<=0):
-#                     return indexs
-#                 if new_score <= old_score:
-#                     return indexs
-                
-                ##print(indexs)
                 left_indexs = indexs[self.X[indexs, feature]<split_value]
                 right_indexs = indexs[self.X[indexs, feature]>=split_value]
                 
@@ -721,31 +685,8 @@ class FairRandomForestClassifier():
         self.n_estimators = n_estimators
         self.compound_bias_method = compound_bias_method
         
-#         if self.criterion not in ["entropy", "auc_sub", "faht", "ig", "fg", "kamiran_add", "kamiran_div", "kamiran_sub"]:
-#             self.criterion = "auc_sub"
-#             warnings.warn("criterion undefined -> setting criterion to auc")
-#         if (self.bias_method != "avg") and (self.bias_method != "w_avg") and (self.bias_method != "xtr"):
-#             self.bias_method = "avg"
-#             warnings.warn("bias_method undefined -> setting bias_method to avg")
-#         if (self.compound_bias_method != "avg") and (self.compound_bias_method != "xtr"):
-#             self.compound_bias_method = "avg"
-#             warnings.warn("compound_bias_method undefined -> setting compound_bias_method to avg")
-            
-#         if "int" not in str(type(self.n_bins)):
-#             raise Exception("n_bins must be an int, not " + str(type(self.n_bins)))
-#         if "int" not in str(type(self.min_leaf)):
-#             raise Exception("min_leaf must be an int, not " + str(type(self.min_leaf)))
-#         if "int" not in str(type(self.max_depth)):
-#             raise Exception("max_depth must be an int, not " + str(type(self.max_depth)))
-#         if ("int" not in str(type(self.n_samples))) and ("float" not in str(type(self.n_samples))):
-#             raise Exception("n_samples must be an int or float, not " + str(type(self.n_samples)))
-# #         if ("int" not in str(type(self.max_features))) and ("float" not in str(type(self.max_features))):
-# #             raise Exception("max_features must be an int or float, not " + str(type(self.max_features)))
-#         if ("int" not in str(type(self.orthogonality))) and ("float" not in str(type(self.orthogonality))):
-#             raise Exception("orthogonality must be an int or float, not " + str(type(self.orthogonality)))
-        
-        
-        # Generating BCDForest
+
+        # Generating FairRandomForest
         dts = [
             FairDecisionTreeClassifier(
                 n_bins=self.n_bins,
@@ -786,11 +727,11 @@ class FairRandomForestClassifier():
         dt_batches = list(batch(dts, n_jobs=self.n_jobs))
         fit_dt_batches = Parallel(n_jobs=self.n_jobs)(
             delayed(fit_trees_parallel)(
-                i, #copy(i),
-                dt_batches, #copy(dt_batches),
-                X, #copy(X),
-                y, #copy(y),
-                s, #copy(s)
+                i, 
+                dt_batches, 
+                X, 
+                y, 
+                s, 
             ) for i in (range(len(copy(dt_batches))))
         )
         fit_dts = [tree for fit_dt_batch in fit_dt_batches for tree in fit_dt_batch]
