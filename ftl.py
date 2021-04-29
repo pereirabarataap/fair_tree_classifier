@@ -1,3 +1,24 @@
+import os
+
+os.environ["MKL_NUM_THREADS"] = "1" 
+os.environ["NUMEXPR_NUM_THREADS"] = "1" 
+os.environ["OMP_NUM_THREADS"] = "1" 
+
+import warnings
+import numpy as np
+import pandas as pd
+from tqdm.auto import tqdm
+from math import ceil
+import multiprocessing
+from copy import deepcopy as copy
+from joblib import delayed, Parallel
+from scipy.stats import mode, entropy
+from sklearn.metrics import roc_auc_score
+
+os.environ["MKL_NUM_THREADS"] = "1" 
+os.environ["NUMEXPR_NUM_THREADS"] = "1" 
+os.environ["OMP_NUM_THREADS"] = "1" 
+
 class BiasConstraintDecisionTreeClassifier():
     def __init__(self,
         n_bins=2, min_leaf=1, max_depth=2, n_samples=1.0, max_features="auto", bootstrap=True, random_state=42,
@@ -114,7 +135,6 @@ class BiasConstraintDecisionTreeClassifier():
         # returns a dictionary as {feature: cutoff_candidate_i} meant as <
         def get_candidate_splits(indexs):
             
-            n_bins = self.n_bins
             candidate_splits = {}
             chosen_features = choose_features()
             #print(chosen_features)
@@ -631,7 +651,7 @@ class BiasConstraintDecisionTreeClassifier():
 
             return probas
         
-        proba = predict_proba(X)[:,1]
+        probas = predict_proba(X)[:,1]
         predicts = np.repeat(0, X.shape[0])
         predicts[probas>=self.pred_th] = 1
         
