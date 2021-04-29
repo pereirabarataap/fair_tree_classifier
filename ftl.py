@@ -10,7 +10,7 @@ from scipy.stats import mode, entropy
 from sklearn.metrics import roc_auc_score
 
 
-class BiasConstraintDecisionTreeClassifier():
+class FairDecisionTreeClassifier():
     def __init__(self,
         n_bins=2, min_leaf=1, max_depth=2, n_samples=1.0, max_features="auto", bootstrap=True, random_state=42,
         criterion="auc_sub", bias_method="avg", compound_bias_method="avg", orthogonality=.5
@@ -649,7 +649,7 @@ class BiasConstraintDecisionTreeClassifier():
         return predicts
     
     def __str__(self):
-        string = "BiasConstraintDecisionTreeClassifier():" + "\n" + \
+        string = "FairDecisionTreeClassifier():" + "\n" + \
                 "  is_fit=" + str(self.is_fit) + "\n" + \
                 "  n_bins=" + str(self.n_bins) + "\n" + \
                 "  min_leaf=" + str(self.min_leaf) + "\n" + \
@@ -665,7 +665,7 @@ class BiasConstraintDecisionTreeClassifier():
         return string
 
     def __repr__(self):
-        string = "BiasConstraintDecisionTreeClassifier():" + "\n" + \
+        string = "FairDecisionTreeClassifier():" + "\n" + \
                 "  is_fit=" + str(self.is_fit) + "\n" + \
                 "  n_bins=" + str(self.n_bins) + "\n" + \
                 "  min_leaf=" + str(self.min_leaf) + "\n" + \
@@ -680,7 +680,7 @@ class BiasConstraintDecisionTreeClassifier():
                 "  compound_bias_method=" + str(self.compound_bias_method)
         return string
     
-class BiasConstraintRandomForestClassifier():
+class FairRandomForestClassifier():
     def __init__(self, n_estimators=500, n_jobs=-1,
         n_bins=2, min_leaf=1, max_depth=2, n_samples=1.0, max_features="auto", bootstrap=True, random_state=42,
         criterion="auc_sub", bias_method="avg", compound_bias_method="avg", orthogonality=.5
@@ -747,7 +747,7 @@ class BiasConstraintRandomForestClassifier():
         
         # Generating BCDForest
         dts = [
-            BiasConstraintDecisionTreeClassifier(
+            FairDecisionTreeClassifier(
                 n_bins=self.n_bins,
                 min_leaf=self.min_leaf,
                 max_depth=self.max_depth,
