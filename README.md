@@ -28,7 +28,7 @@ s_auc = sns_auc_score(s, y_prob)
 
 ## Reproduce
 To reproduce the entirety of our experiments, simply run the <code>reproduce.ipynb</code> jupyter notebook in a Python environment.</br>
-Please note that some modules should be installed prior to the run:
+Please run the following snippets prior to the run:
 
 <code>conda install tqdm --y;</code>
 
