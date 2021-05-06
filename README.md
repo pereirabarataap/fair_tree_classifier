@@ -31,18 +31,33 @@ To reproduce the entirety of our experiments, simply run the <code>reproduce.ipy
 Please note that some modules should be installed prior to the run:
 
 <code>conda install tqdm --y;</code>
+
 <code>conda install numpy --y;</code>
+
 <code>conda install pandas --y;</code>
+
 <code>conda install plotly --y;</code>
+
 <code>conda install jupyter --y;</code>
+
 <code>conda install seaborn --y;</code>
+
 <code>conda install jupyterlab --y;</code>
+
 <code>conda install matplotlib --y;</code>
+
 <code>conda install ipywidgets --y;</code>
+
 <code>conda install scikit-learn --y;</code>
+
 <code>conda install -c conda-forge python-kaleido --y;</code>
+
 <code>conda install nodejs -c conda-forge --repodata-fn=repodata.json --y;</code>
+
 <code>jupyter nbextension enable --py widgetsnbextension;</code>
+
 <code>jupyter labextension install jupyterlab-plotly;</code>
+
 <code>jupyter labextension install @jupyter-widgets/jupyterlab-manager;</code>
+
 <code>jupyter labextension install @jupyter-widgets/jupyterlab-manager plotlywidget;</code>
