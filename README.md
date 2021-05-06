@@ -31,24 +31,18 @@ To reproduce the entirety of our experiments, simply run the <code>reproduce.ipy
 Please note that some modules should be installed prior to the run:
 
 <code>conda install tqdm --y;</code>
-conda install sympy --y;</code>
-conda install numpy --y;</code>
-conda install pandas --y;</br>
-conda install plotly --y;</br>
-conda install jupyter --y;</br>
-conda install seaborn --y;</br>
-conda install networkx --y;</br>
-conda install ipywidgets --y;</br>
-conda install jupyterlab --y;</br>
-conda install matplotlib --y;</br>
-conda  install ipywidgets --y;</br>
-conda install scikit-learn --y;</br>
-conda install -c conda-forge cvxpy --y;</br>
-conda install nodejs -c conda-forge --repodata-fn=repodata.json --y;</br>
-pip install dccp;</br>
-conda install -c conda-forge python-kaleido --y;</br>
-jupyter nbextension enable --py widgetsnbextension;</br>
-jupyter labextension install jupyterlab-plotly;</br>
-jupyter labextension install @jupyter-widgets/jupyterlab-manager;</br>
-jupyter labextension install @jupyter-widgets/jupyterlab-manager plotlywidget;</br>
-</code>
+<code>conda install numpy --y;</code>
+<code>conda install pandas --y;</code>
+<code>conda install plotly --y;</code>
+<code>conda install jupyter --y;</code>
+<code>conda install seaborn --y;</code>
+<code>conda install jupyterlab --y;</code>
+<code>conda install matplotlib --y;</code>
+<code>conda install ipywidgets --y;</code>
+<code>conda install scikit-learn --y;</code>
+<code>conda install -c conda-forge python-kaleido --y;</code>
+<code>conda install nodejs -c conda-forge --repodata-fn=repodata.json --y;</code>
+<code>jupyter nbextension enable --py widgetsnbextension;</code>
+<code>jupyter labextension install jupyterlab-plotly;</code>
+<code>jupyter labextension install @jupyter-widgets/jupyterlab-manager;</code>
+<code>jupyter labextension install @jupyter-widgets/jupyterlab-manager plotlywidget;</code>
