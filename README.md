@@ -30,9 +30,9 @@ s_auc = sns_auc_score(s, y_prob)
 To reproduce the entirety of our experiments, simply run the <code>reproduce.ipynb</code> jupyter notebook in a Python environment.</br>
 Please note that some modules should be installed prior to the run:
 
-<code>conda install tqdm --y;</br>
-conda install sympy --y;</br>
-conda install numpy --y;</br>
+<code>conda install tqdm --y;</code>
+conda install sympy --y;</code>
+conda install numpy --y;</code>
 conda install pandas --y;</br>
 conda install plotly --y;</br>
 conda install jupyter --y;</br>
