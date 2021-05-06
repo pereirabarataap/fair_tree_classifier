@@ -1,5 +1,6 @@
-# fair_tree_learning
+# Fair Tree Learning
 
+## Usage
 ```python
 from ftl import *
 from datasets import *
@@ -24,3 +25,6 @@ y_prob = clf.predict_proba(X)[:,1]
 y_auc = roc_auc_score(y, y_prob)
 s_auc = sns_auc_score(s, y_prob)
 ```
+
+## Reproduce
+To reproduce the entirety of our experiments, simply run the <code>reproduce.ipynb</code> jupyter notebook.
