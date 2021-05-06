@@ -9,6 +9,10 @@ from joblib import delayed, Parallel
 from scipy.stats import mode, entropy
 from sklearn.metrics import roc_auc_score
 
+def sns_auc_score(s_true, y_score):
+    s_auc = roc_auc_score(s_true, y_score)
+    s_auc = max(1-s_auc, s_auc)
+    return s_auc
 
 class FairDecisionTreeClassifier():
     def __init__(self,
