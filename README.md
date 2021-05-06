@@ -61,3 +61,6 @@ Please run the following snippets prior to the run:
 <code>jupyter labextension install @jupyter-widgets/jupyterlab-manager;</code>
 
 <code>jupyter labextension install @jupyter-widgets/jupyterlab-manager plotlywidget;</code>
+
+# TO-DO
+* Implement multi-categorical and multivariate sensitive attributes
