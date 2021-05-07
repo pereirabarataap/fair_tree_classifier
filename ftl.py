@@ -537,7 +537,9 @@ class FairDecisionTreeClassifier():
         self.is_fit=True   
        
     def predict_proba(self, X):
-
+        
+        X = np.array(X)
+        
         def get_probas_dict(tree, X, indexs=np.array([]), probas_dict={}):
 
             indexs = np.array(range(X.shape[0])) if len(indexs)==0 else indexs
@@ -573,6 +575,8 @@ class FairDecisionTreeClassifier():
         return probas
     
     def predict(self, X):
+        
+        X = np.array(X)
         
         def predict_proba(self, X):
 
@@ -743,6 +747,9 @@ class FairRandomForestClassifier():
         self.fit = True
     
     def predict_proba(self, X):
+        
+        X = np.array(X)
+        
         def predict_proba_parallel(dt_batch, X, i):
             probas = []
             for tree in dt_batch:
@@ -782,6 +789,9 @@ class FairRandomForestClassifier():
             return probas
     
     def predict(self, X):
+        
+        X = np.array(X)
+        
         def predict_parallel(tree, X):
             return tree.predict(X)
         if not self.fit:
