@@ -7,6 +7,10 @@ from datasets import *
 
 X, y, s = get_recidivism_gender(show=False)
 
+# s ---> numpy array where each column must be 
+         a binary {0, 1} representation of each
+         unique sensitive attribute value
+
 clf = FairRandomForestClassifier(
     n_bins=2,
     n_jobs=-1,
@@ -61,6 +65,3 @@ Please run the following snippets prior to the run:
 <code>jupyter labextension install @jupyter-widgets/jupyterlab-manager;</code>
 
 <code>jupyter labextension install @jupyter-widgets/jupyterlab-manager plotlywidget;</code>
-
-# TO-DO
-* Implement multi-categorical and multivariate sensitive attributes
