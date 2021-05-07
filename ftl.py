@@ -17,7 +17,7 @@ def sns_auc_score(s_true, y_score):
 class FairDecisionTreeClassifier():
     def __init__(self,
         n_bins=2, min_leaf=1, max_depth=2, n_samples=1.0, max_features="auto", bootstrap=True, random_state=42,
-        criterion="auc_sub", bias_method="avg", compound_bias_method="avg", orthogonality=.5
+        criterion="auc_sub", bias_method="avg", compound_bias_method="xtr", orthogonality=.5
     ):
         self.is_fit = False
         self.n_bins = n_bins
@@ -108,7 +108,6 @@ class FairDecisionTreeClassifier():
             
             candidate_splits = {}
             chosen_features = choose_features()
-            #print(chosen_features)
             for feature in chosen_features:
                 if "str" in str(type(self.X[0,feature])):
                     candidate_splits[feature] = list(pd.value_counts(self.X[indexs, feature]).keys())
@@ -216,44 +215,33 @@ class FairDecisionTreeClassifier():
                     auc_b_columns = []
                     for b_column in range(self.b.shape[1]):
                         b_unique = np.unique(self.b[indexs, b_column])
-                    
+                        
                         if len(b_unique)==1: #if these indexs only contain 1 bias_value
                             auc_b = 1
 
-                        elif len(b_unique)==2: # if we are dealing with a binary case
-                            true_pos = sum(self.b[index_left, b_column]==b_unique[0])
-                            false_pos = sum(self.b[index_left, b_column]==b_unique[1])
-                            actual_pos = sum(self.b[indexs, b_column]==b_unique[0])
-                            actual_neg = sum(self.b[indexs, b_column]==b_unique[1])
-                            tpr = true_pos / actual_pos
-                            fpr = false_pos / actual_neg
-                            auc_b = (1 + tpr - fpr) / 2
-                            auc_b = max(1 - auc_b, auc_b)
-                            if np.isnan(auc_b):
-                                auc_b = 1
+                        else: # if we are dealing with a multi-category/binary case (s must be dummyfied for all attributes/values)
+                            n_left = len(index_left)
+                            n_right = len(index_right)
+                            y_left = self.y[index_left]
+                            y_right = self.y[index_right]
+                            proba_left = sum(y_left==1)/n_left
+                            proba_right = sum(y_right==1)/n_right
+                            
+                            y_prob = np.concatenate(
+                                (np.repeat(proba_left, n_left), np.repeat(proba_right, n_right))
+                            )
+                            
+                            b_left = self.b[index_left, b_column]
+                            b_right = self.b[index_right, b_column]
+                            b_true = np.concatenate(
+                                (b_left, b_right)
+                            )
+                            
+                            
+                            auc_b = roc_auc_score(b_true, y_prob)
+                            auc_b = max(1-auc_b, auc_b)
                                 
-                        else: # apply OvR
-                            auc_storage = []
-                            wts_storage = []
-                            for b_uni in b_unique:
-                                true_pos = sum(self.b[index_left, b_column]==b_uni)
-                                false_pos = sum(self.b[index_left, b_column]!=b_uni)
-                                actual_pos = sum(self.b[indexs, b_column]==b_uni)
-                                actual_neg = sum(self.b[indexs, b_column]!=b_uni)
-                                tpr = true_pos / actual_pos
-                                fpr = false_pos / actual_neg
-                                auc_b_uni = (1 + tpr - fpr) / 2
-                                auc_b_uni = max(1 - auc_b_uni, auc_b_uni)
-                                if np.isnan(auc_b_uni):
-                                    auc_b_uni = 1
-                                auc_storage.append(auc_b_uni)
-                                wts_storage.append(actual_pos)
-                            if self.bias_method=="avg":
-                                auc_b = np.mean(auc_storage)
-                            elif self.bias_method=="w_avg":
-                                auc_b = np.average(auc_storage, weights=wts_storage)
-                            elif self.bias_method=="xtr":
-                                auc_b = max(auc_storage)
+                        
                         auc_b_columns.append(auc_b)
                     if self.compound_bias_method=="avg":
                         auc_b = np.mean(auc_b_columns)
@@ -487,7 +475,6 @@ class FairDecisionTreeClassifier():
             for feature in candidate_splits:
                 for split_value in candidate_splits[feature]:
                     score = evaluate_split(feature, split_value, indexs)
-                    #print(score)
                     if score > best_score:
                         best_score = score
                         best_feature = feature
@@ -655,7 +642,7 @@ class FairDecisionTreeClassifier():
 class FairRandomForestClassifier():
     def __init__(self, n_estimators=500, n_jobs=-1,
         n_bins=2, min_leaf=1, max_depth=2, n_samples=1.0, max_features="auto", bootstrap=True, random_state=42,
-        criterion="auc_sub", bias_method="avg", compound_bias_method="avg", orthogonality=.5
+        criterion="auc_sub", bias_method="avg", compound_bias_method="xtr", orthogonality=.5
         ):
         """
         Bias Constraint Forest Classifier
