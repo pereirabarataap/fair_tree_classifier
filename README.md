@@ -12,15 +12,7 @@ X, y, s = get_recidivism_gender(show=False)
 #        unique sensitive attribute value
 
 clf = FairRandomForestClassifier(
-    n_bins=2,
-    n_jobs=-1,
-    max_depth=2,
-    n_samples=1.0,
-    bootstrap=True,
-    random_state=42,
-    n_estimators=500,
-    orthogonality=0.5,
-    max_features='auto',
+    orthogonality=0.5
 )
 
 clf.fit(X, y, s)
