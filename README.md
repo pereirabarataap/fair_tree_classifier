@@ -26,6 +26,8 @@ s_auc = sns_auc_score(s, y_prob)
 To reproduce the entirety of our experiments, simply run the <code>reproduce.ipynb</code> jupyter notebook in a Python environment.</br>
 Please run the following snippets prior to the run:
 
+<code>pip install openml;</code>
+
 <code>conda install tqdm --y;</code>
 
 <code>conda install numpy --y;</code>
