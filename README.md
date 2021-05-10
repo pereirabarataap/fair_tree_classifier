@@ -8,8 +8,8 @@ from datasets import *
 X, y, s = get_recidivism_gender(show=False)
 
 # s ---> numpy array where each column must be 
-         a binary {0, 1} representation of each
-         unique sensitive attribute value
+#        a binary {0, 1} representation of each
+#        unique sensitive attribute value
 
 clf = FairRandomForestClassifier(
     n_bins=2,
