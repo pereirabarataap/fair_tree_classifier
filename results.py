@@ -48,14 +48,39 @@ def get_results(n_folds, orthogonalities, methods, datasets):
     parameters = list(product(methods, datasets))
     for parameter in parameters:
         method, dataset = parameter
-        if method=="local_sub":
-            y_test_auc_means = []
-            s_test_auc_means = []
-            y_test_auc_stdvs = []
-            s_test_auc_stdvs = []
-            for orthogonality in orthogonalities:
-                y_test_ortho_aucs = []
-                s_test_ortho_aucs = []
+        if "multiple" not in dataset:
+            if method=="local_sub":
+                y_test_auc_means = []
+                s_test_auc_means = []
+                y_test_auc_stdvs = []
+                s_test_auc_stdvs = []
+                for orthogonality in orthogonalities:
+                    y_test_ortho_aucs = []
+                    s_test_ortho_aucs = []
+                    for fold in range(n_folds):
+                        loc = \
+                            (experiments_df["fold"]==fold ) & \
+                            (experiments_df["method"]==method ) & \
+                            (experiments_df["dataset"]==dataset ) & \
+                            (experiments_df["orthogonality"]==orthogonality )
+                        y_test, s_test, p_test = experiments_df.loc[loc, ["y_test", "s_test", "p_test"]].values[0]
+                        y_test_auc = roc_auc_score(y_test, p_test)
+                        s_test_auc = roc_auc_score(s_test, p_test)
+                        s_test_auc = max(1-s_test_auc, s_test_auc)
+                        y_test_ortho_aucs.append(y_test_auc)
+                        s_test_ortho_aucs.append(s_test_auc)
+                    y_test_auc_means.append(np.mean(y_test_ortho_aucs))
+                    s_test_auc_means.append(np.mean(s_test_ortho_aucs))
+                    y_test_auc_stdvs.append(np.std(y_test_ortho_aucs, ddof=0))
+                    s_test_auc_stdvs.append(np.std(s_test_ortho_aucs, ddof=0))
+                results[method][dataset]["y_test_auc_means"] = np.array(y_test_auc_means)
+                results[method][dataset]["s_test_auc_means"] = np.array(s_test_auc_means)
+                results[method][dataset]["y_test_auc_stdvs"] = np.array(y_test_auc_stdvs)
+                results[method][dataset]["s_test_auc_stdvs"] = np.array(s_test_auc_stdvs)
+            else:
+                y_test_aucs = []
+                s_test_aucs = []
+                orthogonality = -1
                 for fold in range(n_folds):
                     loc = \
                         (experiments_df["fold"]==fold ) & \
@@ -66,37 +91,68 @@ def get_results(n_folds, orthogonalities, methods, datasets):
                     y_test_auc = roc_auc_score(y_test, p_test)
                     s_test_auc = roc_auc_score(s_test, p_test)
                     s_test_auc = max(1-s_test_auc, s_test_auc)
-                    y_test_ortho_aucs.append(y_test_auc)
-                    s_test_ortho_aucs.append(s_test_auc)
-                y_test_auc_means.append(np.mean(y_test_ortho_aucs))
-                s_test_auc_means.append(np.mean(s_test_ortho_aucs))
-                y_test_auc_stdvs.append(np.std(y_test_ortho_aucs, ddof=0))
-                s_test_auc_stdvs.append(np.std(s_test_ortho_aucs, ddof=0))
-            results[method][dataset]["y_test_auc_means"] = np.array(y_test_auc_means)
-            results[method][dataset]["s_test_auc_means"] = np.array(s_test_auc_means)
-            results[method][dataset]["y_test_auc_stdvs"] = np.array(y_test_auc_stdvs)
-            results[method][dataset]["s_test_auc_stdvs"] = np.array(s_test_auc_stdvs)
+                    y_test_aucs.append(y_test_auc)
+                    s_test_aucs.append(s_test_auc)
+                results[method][dataset]["y_test_auc_mean"] = np.mean(y_test_aucs)
+                results[method][dataset]["s_test_auc_mean"] = np.mean(s_test_aucs)
+                results[method][dataset]["y_test_auc_stdv"] = np.std(y_test_aucs, ddof=0)
+                results[method][dataset]["s_test_auc_stdv"] = np.std(s_test_aucs, ddof=0)
         else:
-            y_test_aucs = []
-            s_test_aucs = []
-            orthogonality = -1
-            for fold in range(n_folds):
-                loc = \
-                    (experiments_df["fold"]==fold ) & \
-                    (experiments_df["method"]==method ) & \
-                    (experiments_df["dataset"]==dataset ) & \
-                    (experiments_df["orthogonality"]==orthogonality )
-                y_test, s_test, p_test = experiments_df.loc[loc, ["y_test", "s_test", "p_test"]].values[0]
-                y_test_auc = roc_auc_score(y_test, p_test)
-                s_test_auc = roc_auc_score(s_test, p_test)
-                s_test_auc = max(1-s_test_auc, s_test_auc)
-                y_test_aucs.append(y_test_auc)
-                s_test_aucs.append(s_test_auc)
-            results[method][dataset]["y_test_auc_mean"] = np.mean(y_test_aucs)
-            results[method][dataset]["s_test_auc_mean"] = np.mean(s_test_aucs)
-            results[method][dataset]["y_test_auc_stdv"] = np.std(y_test_aucs, ddof=0)
-            results[method][dataset]["s_test_auc_stdv"] = np.std(s_test_aucs, ddof=0)
             
+            if method=="local_sub":
+                y_test_auc_means = []                
+                y_test_auc_stdvs = []
+                
+                #race
+                s_test_auc_means_0 = []
+                s_test_auc_stdvs_0 = []
+                
+                #gender
+                s_test_auc_means_1 = []
+                s_test_auc_stdvs_1 = []
+                
+                for orthogonality in orthogonalities:
+                    y_test_ortho_aucs = []
+                    
+                    s_test_ortho_aucs_0 = []
+                    s_test_ortho_aucs_1 = []
+                    for fold in range(n_folds):
+                        loc = \
+                            (experiments_df["fold"]==fold ) & \
+                            (experiments_df["method"]==method ) & \
+                            (experiments_df["dataset"]==dataset ) & \
+                            (experiments_df["orthogonality"]==orthogonality )
+                        y_test, s_test, p_test = experiments_df.loc[loc, ["y_test", "s_test", "p_test"]].values[0]
+                        y_test_auc = roc_auc_score(y_test, p_test)
+                        y_test_ortho_aucs.append(y_test_auc)
+                        
+                        s_test_0 = s_test[:,0]
+                        s_test_auc_0 = roc_auc_score(s_test_0, p_test)
+                        s_test_auc_0 = max(1-s_test_auc_0, s_test_auc_0)
+                        s_test_ortho_aucs_0.append(s_test_auc_0)
+                        
+                        s_test_1 = s_test[:,1]
+                        s_test_auc_1 = roc_auc_score(s_test_1, p_test)
+                        s_test_auc_1 = max(1-s_test_auc_1, s_test_auc_1)
+                        s_test_ortho_aucs_1.append(s_test_auc_1)
+                        
+                    y_test_auc_means.append(np.mean(y_test_ortho_aucs))
+                    y_test_auc_stdvs.append(np.std(y_test_ortho_aucs, ddof=0))
+                    
+                    s_test_auc_means_0.append(np.mean(s_test_ortho_aucs_0))
+                    s_test_auc_stdvs_0.append(np.std(s_test_ortho_aucs_0, ddof=0))
+                    
+                    s_test_auc_means_1.append(np.mean(s_test_ortho_aucs_1))
+                    s_test_auc_stdvs_1.append(np.std(s_test_ortho_aucs_1, ddof=0))
+                    
+                results[method][dataset]["y_test_auc_means"] = np.array(y_test_auc_means)
+                results[method][dataset]["y_test_auc_stdvs"] = np.array(y_test_auc_stdvs)
+                
+                results[method][dataset]["s_test_auc_means_0"] = np.array(s_test_auc_means_0)
+                results[method][dataset]["s_test_auc_stdvs_0"] = np.array(s_test_auc_stdvs_0)
+                results[method][dataset]["s_test_auc_means_1"] = np.array(s_test_auc_means_1)
+                results[method][dataset]["s_test_auc_stdvs_1"] = np.array(s_test_auc_stdvs_1)
+                
     return results
 
 def make_2d_fig(n_folds, orthogonalities, methods, datasets):
@@ -104,91 +160,180 @@ def make_2d_fig(n_folds, orthogonalities, methods, datasets):
     fig, axs = plt.subplots(5,2,dpi=200, figsize=(16,3.5*5), sharey=False, sharex=False)
     i = 0
     for dataset in datasets:
-        suptitle = dataset.split("_")[0].capitalize()  + " (" + dataset.split("_")[1].capitalize() + ")"
-        axs = axs.ravel()
-        axs[i*2+0].grid()
-        axs[i*2+1].grid()
-        clr_ctr = 1
-        for method in methods:
-            if method in ["local_sub"]:
-                y_color = "C0"
-                s_color = "C0"
-                rp_color ="C0"
+        if "multiple" not in dataset:
+            suptitle = dataset.split("_")[0].capitalize()  + " (" + dataset.split("_")[1].capitalize() + ")"
+            axs = axs.ravel()
+            axs[i*2+0].grid()
+            axs[i*2+1].grid()
+            clr_ctr = 1
+            for method in methods:
+                if method in ["local_sub"]:
+                    y_color = "C0"
+                    s_color = "C0"
+                    rp_color ="C0"
 
-                label_y_test = method.split("_")[0] + "_y"
-                label_s_test = method.split("_")[0] + "_s"
+                    label_y_test = method.split("_")[0] + "_y"
+                    label_s_test = method.split("_")[0] + "_s"
 
-                y_test_auc_means = results[method][dataset]["y_test_auc_means"]
-                s_test_auc_means = results[method][dataset]["s_test_auc_means"]
-                y_test_auc_stdvs = results[method][dataset]["y_test_auc_stdvs"]
-                s_test_auc_stdvs = results[method][dataset]["s_test_auc_stdvs"]
-
-
-                # means
+                    y_test_auc_means = results[method][dataset]["y_test_auc_means"]
+                    s_test_auc_means = results[method][dataset]["s_test_auc_means"]
+                    y_test_auc_stdvs = results[method][dataset]["y_test_auc_stdvs"]
+                    s_test_auc_stdvs = results[method][dataset]["s_test_auc_stdvs"]
 
 
-                axs[i*2+0].plot(
-                    orthogonalities, y_test_auc_means, marker="^", markersize=5, lw=3,zorder=3,
-                    path_effects=[pe.Stroke(linewidth=3.5, foreground="k"), pe.Normal()],
-                    linestyle="-", label="AUC" + r"$_{\rm Y}$", c=y_color, markeredgewidth=2, #markeredgecolor="black",
-                )
-                axs[i*2+0].plot(
-                    orthogonalities, s_test_auc_means, marker="v", markersize=5, lw=3,zorder=3,
-                    path_effects=[pe.Stroke(linewidth=3.5, foreground="k"), pe.Normal()],
-                    linestyle="-", label="AUC" + r"$_{\rm S}$", c=s_color, markeredgewidth=2, #markeredgecolor="black",
-                )
+                    # means
+
+
+                    axs[i*2+0].plot(
+                        orthogonalities, y_test_auc_means, marker="^", markersize=5, lw=3,zorder=3,
+                        path_effects=[pe.Stroke(linewidth=3.5, foreground="k"), pe.Normal()],
+                        linestyle="-", label="AUC" + r"$_{\rm Y}$", c=y_color, markeredgewidth=2, #markeredgecolor="black",
+                    )
+                    axs[i*2+0].plot(
+                        orthogonalities, s_test_auc_means, marker="v", markersize=5, lw=3,zorder=3,
+                        path_effects=[pe.Stroke(linewidth=3.5, foreground="k"), pe.Normal()],
+                        linestyle="-", label="AUC" + r"$_{\rm S}$", c=s_color, markeredgewidth=2, #markeredgecolor="black",
+                    )
 
 
 
-                # stdvs
+                    # stdvs
 
-                axs[i*2+0].fill_between(orthogonalities, y_test_auc_means+y_test_auc_stdvs, y_test_auc_means-y_test_auc_stdvs, alpha=0.5, color=y_color)
-                axs[i*2+0].fill_between(orthogonalities, s_test_auc_means+s_test_auc_stdvs, s_test_auc_means-s_test_auc_stdvs, alpha=0.5, color=s_color)
-                axs[i*2+0].set_xticks(np.linspace(0,1,11))
-                axs[i*2+1].plot(
-                    s_test_auc_means, y_test_auc_means, marker="d", markersize=5, lw=3,zorder=3,
-                    path_effects=[pe.Stroke(linewidth=3.5, foreground="k"), pe.Normal()],
-                    linestyle="-", label="Our method", c=rp_color, markeredgewidth=2, #markeredgecolor="black",
-                )
-            else:
-                y_test_auc_mean = results[method][dataset]["y_test_auc_mean"]
-                s_test_auc_mean = results[method][dataset]["s_test_auc_mean"]
-                if method=="faht":
-                    label = "FAHT"
+                    axs[i*2+0].fill_between(orthogonalities, y_test_auc_means+y_test_auc_stdvs, y_test_auc_means-y_test_auc_stdvs, alpha=0.5, color=y_color)
+                    axs[i*2+0].fill_between(orthogonalities, s_test_auc_means+s_test_auc_stdvs, s_test_auc_means-s_test_auc_stdvs, alpha=0.5, color=s_color)
+                    axs[i*2+0].set_xticks(np.linspace(0,1,11))
+                    axs[i*2+1].plot(
+                        s_test_auc_means, y_test_auc_means, marker="d", markersize=5, lw=3,zorder=3,
+                        path_effects=[pe.Stroke(linewidth=3.5, foreground="k"), pe.Normal()],
+                        linestyle="-", label="Our method", c=rp_color, markeredgewidth=2, #markeredgecolor="black",
+                    )
                 else:
-                    label = method.split("_")[0].capitalize()+ r"$_{\rm " + method.split("_")[1].capitalize() + "}$"
-                axs[i*2+1].scatter(s_test_auc_mean, y_test_auc_mean, label=label, zorder=5, s=10**2, edgecolor="black", lw=1, marker="o", c="C"+str(clr_ctr))
-                clr_ctr += 1
+                    y_test_auc_mean = results[method][dataset]["y_test_auc_mean"]
+                    s_test_auc_mean = results[method][dataset]["s_test_auc_mean"]
+                    if method=="faht":
+                        label = "FAHT"
+                    else:
+                        label = method.split("_")[0].capitalize()+ r"$_{\rm " + method.split("_")[1].capitalize() + "}$"
+                    axs[i*2+1].scatter(s_test_auc_mean, y_test_auc_mean, label=label, zorder=5, s=10**2, edgecolor="black", lw=1, marker="o", c="C"+str(clr_ctr))
+                    clr_ctr += 1
 
 
-        if i==4:
-            axs[i*2+0].set_xlabel(r"$\Theta$", fontsize=13)
-            axs[i*2+1].set_xlabel("AUC" + r"$_{\rm S}$" , fontsize=11)
+            if i==4:
+                axs[i*2+0].set_xlabel(r"$\Theta$", fontsize=13)
+                axs[i*2+1].set_xlabel("AUC" + r"$_{\rm S}$" , fontsize=11)
 
-        axs[i*2+0].set_ylabel("Performance", fontsize=11)
-        axs[i*2+1].set_ylabel("AUC" + r"$_{\rm Y}$", fontsize=11)
-        axs[i*2+1].yaxis.set_tick_params(labelright=True)
-        axs[i*2+1].yaxis.tick_right()
-        axs[i*2+1].yaxis.set_label_position("right")
+            axs[i*2+0].set_ylabel("Performance", fontsize=11)
+            axs[i*2+1].set_ylabel("AUC" + r"$_{\rm Y}$", fontsize=11)
+            axs[i*2+1].yaxis.set_tick_params(labelright=True)
+            axs[i*2+1].yaxis.tick_right()
+            axs[i*2+1].yaxis.set_label_position("right")
 
-        ymin, ymax = axs[i*2+0].get_ylim()
-        axs[i*2+1].set_ylim(ymin, ymax)
+            ymin, ymax = axs[i*2+0].get_ylim()
+            axs[i*2+1].set_ylim(ymin, ymax)
 
-        if i==0:
-            axs[i*2+0].legend(title="Our method", fontsize=8, loc="lower left")
-            axs[i*2+1].legend(fontsize=8, loc="lower right")
-        axs[i*2+0].set_title(suptitle, loc="left", fontsize=11)
+            if i==0:
+                axs[i*2+0].legend(title="Our method", fontsize=8, loc="lower left")
+                axs[i*2+1].legend(fontsize=8, loc="lower right")
+            axs[i*2+0].set_title(suptitle, loc="left", fontsize=11)
 
-        i += 1
+            i += 1
 
     plt.subplots_adjust(
         top=.95,
         wspace=0,
         hspace=0.3
     )
-    plt.savefig("2d_results"+".svg", format="svg")
+    plt.savefig("2d_results_0"+".svg", format="svg")
     plt.show()
+    
+    i=0
+    method="local_sub"
+    dataset="adult_multiple"
+    fig, axs = plt.subplots(1,2,dpi=200, figsize=(16,3.5*1), sharey=False, sharex=False)
+    suptitle = dataset.split("_")[0].capitalize()  + " (" + dataset.split("_")[1].capitalize() + ")"
+    axs = axs.ravel()
+    axs[i*2+0].grid()
+    axs[i*2+1].grid()
+    clr_ctr = 1
+    y_color = "C0"
+    s_color = "C0"
+    rp_color ="C0"
 
+    label_y_test = method.split("_")[0] + "_y"
+    label_s_test = method.split("_")[0] + "_s"
+
+    y_test_auc_means = results[method][dataset]["y_test_auc_means"]
+    y_test_auc_stdvs = results[method][dataset]["y_test_auc_stdvs"]
+    
+    s_test_auc_means_0 = results[method][dataset]["s_test_auc_means_0"]
+    s_test_auc_stdvs_0 = results[method][dataset]["s_test_auc_stdvs_0"]
+    s_test_auc_means_1 = results[method][dataset]["s_test_auc_means_1"]
+    s_test_auc_stdvs_1 = results[method][dataset]["s_test_auc_stdvs_1"]
+    
+    # means
+    axs[i*2+0].plot(
+        orthogonalities, y_test_auc_means, marker="^", markersize=5, lw=3,zorder=3,
+        path_effects=[pe.Stroke(linewidth=3.5, foreground="k"), pe.Normal()],
+        linestyle="-", label="AUC" + r"$_{\rm Y}$", c=y_color, markeredgewidth=2, #markeredgecolor="black",
+    )
+    axs[i*2+0].plot(
+        orthogonalities, s_test_auc_means_0, marker="v", markersize=5, lw=3,zorder=3,
+        path_effects=[pe.Stroke(linewidth=3.5, foreground="k"), pe.Normal()],
+        linestyle="-", label="AUC" + r"$_{\rm S}$ (race)", c="C1", markeredgewidth=2, #markeredgecolor="black",
+    )
+    axs[i*2+0].plot(
+        orthogonalities, s_test_auc_means_1, marker="v", markersize=5, lw=3,zorder=3,
+        path_effects=[pe.Stroke(linewidth=3.5, foreground="k"), pe.Normal()],
+        linestyle="-", label="AUC" + r"$_{\rm S}$ (gender)", c="C2", markeredgewidth=2, #markeredgecolor="black",
+    )
+    # stdvs
+
+    axs[i*2+0].fill_between(orthogonalities, y_test_auc_means+y_test_auc_stdvs, y_test_auc_means-y_test_auc_stdvs, alpha=0.5, color=y_color)
+    axs[i*2+0].fill_between(orthogonalities, s_test_auc_means_0+s_test_auc_stdvs_0, s_test_auc_means_0-s_test_auc_stdvs_0, alpha=0.5, color="C1")
+    axs[i*2+0].fill_between(orthogonalities, s_test_auc_means_1+s_test_auc_stdvs_1, s_test_auc_means_1-s_test_auc_stdvs_1, alpha=0.5, color="C2")
+    axs[i*2+0].set_xticks(np.linspace(0,1,11))
+    
+    axs[i*2+1].plot(
+        s_test_auc_means_0, y_test_auc_means, marker="d", markersize=5, lw=3,zorder=3,
+        path_effects=[pe.Stroke(linewidth=3.5, foreground="k"), pe.Normal()],
+        linestyle="-", label="Our method (race)", c="C1", markeredgewidth=2, #markeredgecolor="black",
+    )
+    
+    axs[i*2+1].plot(
+        [], [], marker="d", markersize=5, lw=3,zorder=3,
+        path_effects=[pe.Stroke(linewidth=3.5, foreground="k"), pe.Normal()],
+        linestyle="-", label="Our method (gender)", c="C2", markeredgewidth=2, #markeredgecolor="black",
+    )
+    
+    axs[i*2+1].twiny().plot(
+        s_test_auc_means_1, y_test_auc_means, marker="d", markersize=5, lw=3,zorder=3,
+        path_effects=[pe.Stroke(linewidth=3.5, foreground="k"), pe.Normal()],
+        linestyle="-", label="Our method (gender)", c="C2", markeredgewidth=2, #markeredgecolor="black",
+    )
+    
+    axs[i*2+0].set_xlabel(r"$\Theta$", fontsize=13)
+    axs[i*2+1].set_xlabel("AUC" + r"$_{\rm S}$" , fontsize=11)
+
+    axs[i*2+0].set_ylabel("Performance", fontsize=11)
+    axs[i*2+1].set_ylabel("AUC" + r"$_{\rm Y}$", fontsize=11)
+    axs[i*2+1].yaxis.set_tick_params(labelright=True)
+    axs[i*2+1].yaxis.tick_right()
+    axs[i*2+1].yaxis.set_label_position("right")
+
+    ymin, ymax = axs[i*2+0].get_ylim()
+    axs[i*2+1].set_ylim(ymin, ymax)
+    axs[i*2+0].legend(title="Our method", fontsize=8, loc="upper right")
+    axs[i*2+1].legend(fontsize=8, loc="upper left")
+    axs[i*2+0].set_title(suptitle, loc="left", fontsize=11)
+    
+    plt.subplots_adjust(
+        top=.95,
+        wspace=0,
+        hspace=0.3
+    )
+    plt.savefig("2d_results_1"+".svg", format="svg")
+    plt.show()
+                
 def get_measures(n_folds, orthogonalities):
     
     method = "local_sub"
