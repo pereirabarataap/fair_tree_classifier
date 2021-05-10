@@ -1,13 +1,13 @@
 import numpy as np
 
 n_jobs = -1
-n_bins = 2
-n_folds = 2
-max_depth = 1
+n_bins = 10
+n_folds = 10
+max_depth = 4
 bootstrap = True
 random_state = 42
-n_estimators = 16
+n_estimators = 500
 max_features = "sqrt"
 orthogonalities = np.linspace(0,1,11).round(2)
 methods = ["local_sub", "kamiran_sub", "kamiran_div", "faht"]
-datasets = ["bank_age", "adult_race", "adult_gender", "recidivism_race", "recidivism_gender"]
+datasets = ["bank_age", "adult_race", "adult_gender", "adult_multiple", "recidivism_race", "recidivism_gender"]

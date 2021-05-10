@@ -57,7 +57,9 @@ def make_setup(
                 rmtree(exp_dataset_folder)
                 os.mkdir(exp_dataset_folder)
                     
-def make_experiments_df(n_folds, orthogonalities, datasets_folder, experiments_folder, methods, datasets):
+def make_experiments_df(
+    n_folds, orthogonalities, datasets_folder, experiments_folder, methods, datasets
+):
     data = []
     parameters = list(product(methods, datasets))
     for parameter in parameters:
@@ -73,10 +75,29 @@ def make_experiments_df(n_folds, orthogonalities, datasets_folder, experiments_f
         test_idxs = {
             fold: joblib.load(dataset_folder+"/"+str(fold)+"_test_idx.pkl") for fold in range(n_folds)
         }
-        if method=="local_sub":
-            for orthogonality in orthogonalities:
+        if "multiple" not in dataset:
+            if method=="local_sub":
+                for orthogonality in orthogonalities:
+                    for fold in range(n_folds):
+                        file_name = str(orthogonality) + "_" + str(fold) + ".pkl"
+                        file_path = exp_dataset_folder + "/" + file_name
+                        file = joblib.load(file_path)
+                        test_idx = test_idxs[fold]
+                        y_test = y[test_idx]
+                        s_test = s[test_idx]
+                        p_test = file["p_test"]
+
+                        row = [method, dataset, orthogonality, fold, y_test, s_test, p_test]
+                        data.append(row)
+
+                        print_line = str(datetime.now()) + " " + method + " " + dataset
+                        print_line += " orthogonality=" + str(orthogonality) + " fold=" + str(fold)
+                        sys.stdout.write("\r" + str(print_line)+"\t\t\t\t\t\t")
+                        sys.stdout.flush()
+            else:
+                orthogonality = -1
                 for fold in range(n_folds):
-                    file_name = str(orthogonality) + "_" + str(fold) + ".pkl"
+                    file_name = str(fold) + ".pkl"
                     file_path = exp_dataset_folder + "/" + file_name
                     file = joblib.load(file_path)
                     test_idx = test_idxs[fold]
@@ -87,42 +108,45 @@ def make_experiments_df(n_folds, orthogonalities, datasets_folder, experiments_f
                     row = [method, dataset, orthogonality, fold, y_test, s_test, p_test]
                     data.append(row)
 
-                    print_line = str(datetime.now()) + " " + method + " " + dataset
-                    print_line += " orthogonality=" + str(orthogonality) + " fold=" + str(fold)
+                    print_line = str(datetime.now()) + " " + method +  " " + dataset
+                    print_line += " fold=" + str(fold)
                     sys.stdout.write("\r" + str(print_line)+"\t\t\t\t\t\t")
                     sys.stdout.flush()
+    
         else:
-            orthogonality = -1
-            for fold in range(n_folds):
-                file_name = str(fold) + ".pkl"
-                file_path = exp_dataset_folder + "/" + file_name
-                file = joblib.load(file_path)
-                test_idx = test_idxs[fold]
-                y_test = y[test_idx]
-                s_test = s[test_idx]
-                p_test = file["p_test"]
+            if method=="local_sub":
+                for orthogonality in orthogonalities:
+                    for fold in range(n_folds):
+                        file_name = str(orthogonality) + "_" + str(fold) + ".pkl"
+                        file_path = exp_dataset_folder + "/" + file_name
+                        file = joblib.load(file_path)
+                        test_idx = test_idxs[fold]
+                        y_test = y[test_idx]
+                        s_test = s[test_idx]
+                        p_test = file["p_test"]
 
-                row = [method, dataset, orthogonality, fold, y_test, s_test, p_test]
-                data.append(row)
+                        row = [method, dataset, orthogonality, fold, y_test, s_test, p_test]
+                        data.append(row)
 
-                print_line = str(datetime.now()) + " " + method +  " " + dataset
-                print_line += " fold=" + str(fold)
-                sys.stdout.write("\r" + str(print_line)+"\t\t\t\t\t\t")
-                sys.stdout.flush()
-
+                        print_line = str(datetime.now()) + " " + method + " " + dataset
+                        print_line += " orthogonality=" + str(orthogonality) + " fold=" + str(fold)
+                        sys.stdout.write("\r" + str(print_line)+"\t\t\t\t\t\t")
+                        sys.stdout.flush()
+                
+                
     experiments_df = pd.DataFrame(
         data=data,
         columns=[
             "method", "dataset", "orthogonality", "fold", "y_test", "s_test", "p_test"
         ]
     )
-
     joblib.dump(experiments_df, "experiments_df.pkl")
     
 def run_experiments(
     n_jobs, n_bins, n_folds, max_depth, bootstrap, random_state, n_estimators, max_features,
     orthogonalities, datasets_folder, experiments_folder, methods, datasets
 ): 
+    
     parameters = list(product(methods, datasets))
     for parameter in tqdm_n(parameters):
         method, dataset = parameter
@@ -133,13 +157,49 @@ def run_experiments(
         X = joblib.load(dataset_folder+"/X.pkl")
         y = joblib.load(dataset_folder+"/y.pkl")
         s = joblib.load(dataset_folder+"/s.pkl")
+        
+        if "multiple" not in dataset:
+            if "local_sub"==method:
+                criterion = "auc_" + method.split("_")[-1]
+                for orthogonality in orthogonalities:
+                    for fold in range(n_folds):
+                        file_name = str(orthogonality) + "_" + str(fold) + ".pkl"
+                        if file_name not in os.listdir(exp_dataset_folder):
+                            file = {}
+                            file_path = exp_dataset_folder + "/" + file_name
+                            test_idx = joblib.load(dataset_folder+"/"+str(fold)+"_test_idx.pkl")
+                            train_idx = joblib.load(dataset_folder+"/"+str(fold)+"_train_idx.pkl")
+                            X_train, X_test = X[train_idx], X[test_idx]
+                            y_train, y_test = y[train_idx], y[test_idx]
+                            s_train, s_test = s[train_idx], s[test_idx]
+                            clf = FRFC(
+                                n_bins=n_bins,
+                                n_jobs=n_jobs,
+                                criterion=criterion,
+                                bootstrap=bootstrap,
+                                max_depth=max_depth,
+                                random_state=random_state,
+                                n_estimators=n_estimators,
+                                max_features=max_features,
+                                orthogonality=orthogonality,
+                            )
+                            file["start"] = datetime.now()
+                            clf.fit(X_train, y_train, s_train)
+                            p_test = clf.predict_proba(X_test)[:,1]
+                            p_train = clf.predict_proba(X_train)[:,1]
+                            file["stop"] = datetime.now()
+                            file["p_train"] = p_train
+                            file["p_test"] = p_test
+                            joblib.dump(file, file_path)
+                            print_line = str(datetime.now()) + " " + method + " " + dataset
+                            print_line += " orthogonality=" + str(orthogonality) + " fold=" + str(fold) + " time: " + str(file["stop"] - file["start"])
+                            sys.stdout.write("\r" + str(print_line)+"\t\t\t\t\t\t")
+                            sys.stdout.flush()
 
-        if "local_sub"==method:
-            criterion = "auc_" + method.split("_")[-1]
-            for orthogonality in orthogonalities:
+            else:
                 for fold in range(n_folds):
-                    file_name = str(orthogonality) + "_" + str(fold) + ".pkl"
-                    if file_name not in os.listdir(exp_dataset_folder):
+                    file_name = str(fold) + ".pkl"
+                    if True:#file_name not in os.listdir(exp_dataset_folder):
                         file = {}
                         file_path = exp_dataset_folder + "/" + file_name
                         test_idx = joblib.load(dataset_folder+"/"+str(fold)+"_test_idx.pkl")
@@ -150,13 +210,12 @@ def run_experiments(
                         clf = FRFC(
                             n_bins=n_bins,
                             n_jobs=n_jobs,
-                            criterion=criterion,
+                            criterion=method,
                             bootstrap=bootstrap,
                             max_depth=max_depth,
                             random_state=random_state,
                             n_estimators=n_estimators,
                             max_features=max_features,
-                            orthogonality=orthogonality,
                         )
                         file["start"] = datetime.now()
                         clf.fit(X_train, y_train, s_train)
@@ -167,42 +226,48 @@ def run_experiments(
                         file["p_test"] = p_test
                         joblib.dump(file, file_path)
                         print_line = str(datetime.now()) + " " + method + " " + dataset
-                        print_line += " orthogonality=" + str(orthogonality) + " fold=" + str(fold) + " time: " + str(file["stop"] - file["start"])
+                        print_line += " fold=" + str(fold) + " time: " + str(file["stop"] - file["start"])
                         sys.stdout.write("\r" + str(print_line)+"\t\t\t\t\t\t")
                         sys.stdout.flush()
-
+        
         else:
-            for fold in range(n_folds):
-                file_name = str(fold) + ".pkl"
-                if True:#file_name not in os.listdir(exp_dataset_folder):
-                    file = {}
-                    file_path = exp_dataset_folder + "/" + file_name
-                    test_idx = joblib.load(dataset_folder+"/"+str(fold)+"_test_idx.pkl")
-                    train_idx = joblib.load(dataset_folder+"/"+str(fold)+"_train_idx.pkl")
-                    X_train, X_test = X[train_idx], X[test_idx]
-                    y_train, y_test = y[train_idx], y[test_idx]
-                    s_train, s_test = s[train_idx], s[test_idx]
-                    clf = FRFC(
-                        n_bins=n_bins,
-                        n_jobs=n_jobs,
-                        criterion=method,
-                        bootstrap=bootstrap,
-                        max_depth=max_depth,
-                        random_state=random_state,
-                        n_estimators=n_estimators,
-                        max_features=max_features,
-                    )
-                    file["start"] = datetime.now()
-                    clf.fit(X_train, y_train, s_train)
-                    p_test = clf.predict_proba(X_test)[:,1]
-                    p_train = clf.predict_proba(X_train)[:,1]
-                    file["stop"] = datetime.now()
-                    file["p_train"] = p_train
-                    file["p_test"] = p_test
-                    joblib.dump(file, file_path)
-                    print_line = str(datetime.now()) + " " + method + " " + dataset
-                    print_line += " fold=" + str(fold) + " time: " + str(file["stop"] - file["start"])
-                    sys.stdout.write("\r" + str(print_line)+"\t\t\t\t\t\t")
-                    sys.stdout.flush()
-                    
+            if "local_sub"==method:
+                criterion = "auc_" + method.split("_")[-1]
+                for orthogonality in orthogonalities:
+                    for fold in range(n_folds):
+                        file_name = str(orthogonality) + "_" + str(fold) + ".pkl"
+                        if file_name not in os.listdir(exp_dataset_folder):
+                            file = {}
+                            file_path = exp_dataset_folder + "/" + file_name
+                            test_idx = joblib.load(dataset_folder+"/"+str(fold)+"_test_idx.pkl")
+                            train_idx = joblib.load(dataset_folder+"/"+str(fold)+"_train_idx.pkl")
+                            X_train, X_test = X[train_idx], X[test_idx]
+                            y_train, y_test = y[train_idx], y[test_idx]
+                            s_train, s_test = s[train_idx], s[test_idx]
+                            clf = FRFC(
+                                n_bins=n_bins,
+                                n_jobs=n_jobs,
+                                criterion=criterion,
+                                bootstrap=bootstrap,
+                                max_depth=max_depth,
+                                random_state=random_state,
+                                n_estimators=n_estimators,
+                                max_features=max_features,
+                                orthogonality=orthogonality,
+                            )
+                            file["start"] = datetime.now()
+                            clf.fit(X_train, y_train, s_train)
+                            p_test = clf.predict_proba(X_test)[:,1]
+                            p_train = clf.predict_proba(X_train)[:,1]
+                            file["stop"] = datetime.now()
+                            file["p_train"] = p_train
+                            file["p_test"] = p_test
+                            joblib.dump(file, file_path)
+                            print_line = str(datetime.now()) + " " + method + " " + dataset
+                            print_line += " orthogonality=" + str(orthogonality) + " fold=" + str(fold) + " time: " + str(file["stop"] - file["start"])
+                            sys.stdout.write("\r" + str(print_line)+"\t\t\t\t\t\t")
+                            sys.stdout.flush()
+                            
     make_experiments_df(n_folds, orthogonalities, datasets_folder, experiments_folder, methods, datasets)
+    
+    
