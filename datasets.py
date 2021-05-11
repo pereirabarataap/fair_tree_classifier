@@ -106,7 +106,7 @@ def get_adult_gender(show=True):
         print("s dist:", pd.value_counts(s).values.ravel()/len(s))
     return X_dummy, y, s
 
-def get_adult_multiple(show=True):
+def get_adult_multiple_1(show=True):
     did = 179
     dataset = openml.datasets.get_dataset(did)
     X, y, categorical_indicator, attribute_names = dataset.get_data(
@@ -149,6 +149,51 @@ def get_adult_multiple(show=True):
         for s_column in range(s.shape[1]):
             print("s dist "+str(s_column)+":", pd.value_counts(s[:,s_column]).values.ravel()/len(s))
             
+    return X_dummy, y, s
+
+def get_adult_multiple_2(show=True):
+    did = 179
+    dataset = openml.datasets.get_dataset(did)
+    X, y, categorical_indicator, attribute_names = dataset.get_data(
+        dataset_format='dataframe',
+        target=dataset.default_target_attribute
+    )
+    categorical_indicator = np.array(categorical_indicator)
+    attribute_names = np.array(range(X.shape[1])).astype(str)
+    X.columns = attribute_names
+    df = pd.concat((copy(X), copy(y)), axis=1)
+    df = df.dropna()
+    df.columns = attribute_names.tolist() + ["class"]
+    columns = df.columns.tolist()
+    columns.remove("8")
+    columns.remove("9")
+    columns = ["8", "9"] + columns
+    df = df[columns]
+    for column in columns:
+        try:
+            df[column] = df[column].astype(float)
+        except:
+            df[column] = df[column].astype(str)
+
+    s = []
+    s_race = (df["8"]=="White").values.astype(int).astype(str).tolist()
+    s_gender = (df["9"]=="Male").values.astype(int).astype(str).tolist()
+    for i in range(len(df)):
+        row = s_race[i] + s_gender[i]
+        s.append(row)
+    s = pd.get_dummies(s).values.astype(int) #order: BF, BM, WF, WM 
+    features = columns[2:-1]
+    X_dummy = pd.get_dummies(df[features]).values # dummyfying (not really needed)
+    X = df[features].values
+    y = (df["class"]==pd.value_counts(df["class"]).keys()[0]).values.astype(int)
+    if show:
+        display(df.head())
+        print("X shape:", X.shape)
+        print("X_dummy shape:", X_dummy.shape)
+        print("y dist:", pd.value_counts(y).values.ravel()/len(y))
+        for s_column in range(s.shape[1]):
+            print("s dist "+str(s_column)+":", pd.value_counts(s[:,s_column]).values.ravel()/len(s))
+
     return X_dummy, y, s
 
 def get_recidivism_race(show=True):
