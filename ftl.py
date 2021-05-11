@@ -16,7 +16,7 @@ def sns_auc_score(s_true, y_score):
 
 class FairDecisionTreeClassifier():
     def __init__(self,
-        n_bins=2, min_leaf=1, max_depth=2, n_samples=1.0, max_features="auto", bootstrap=True, random_state=42,
+        n_bins=2, min_leaf=2, max_depth=2, n_samples=1.0, max_features="auto", bootstrap=True, random_state=42,
         criterion="auc_sub", bias_method="avg", compound_bias_method="xtr", orthogonality=.5
     ):
         self.is_fit = False
@@ -171,7 +171,7 @@ class FairDecisionTreeClassifier():
                     if len(b_unique)==1: #if these indexs only contain 1 bias_value
                         auc_b = 1
                         
-                    elif len(b_unique)==2: # if we are dealing with a binary case
+                    else: # if we are dealing with a binary case
                         n_left = len(index_left)
                         n_right = len(index_right)
                         y_left = self.y[index_left]
@@ -190,25 +190,7 @@ class FairDecisionTreeClassifier():
                         )
                         auc_b = roc_auc_score(b_true, y_prob)
                         auc_b = max(1-auc_b, auc_b)
-                    else: # apply OvR
-                        auc_storage = []
-                        wts_storage = []
-                        for b_uni in b_unique:
-                            b_true = np.concatenate(
-                                ((b_left==b_uni).astype(int), (b_right==b_uni).astype(int))
-                            )
-                            auc_b_uni = roc_auc_score(b_true, y_prob)
-                            auc_b_uni = max(1-auc_b_uni, auc_b_uni)
-                            if np.isnan(auc_b_uni):
-                                auc_b_uni = 1
-                            auc_storage.append(auc_b_uni)
-                            wts_storage.append(sum(b_true))
-                        if self.bias_method=="avg":
-                            auc_b = np.mean(auc_storage)
-                        elif self.bias_method=="w_avg":
-                            auc_b = np.average(auc_storage, weights=wts_storage)
-                        elif self.bias_method=="xtr":
-                            auc_b = max(auc_storage)
+                    
                             
                 # if we have more than 1 bias column
                 else:
@@ -236,12 +218,9 @@ class FairDecisionTreeClassifier():
                             b_true = np.concatenate(
                                 (b_left, b_right)
                             )
-                            
-                            
                             auc_b = roc_auc_score(b_true, y_prob)
                             auc_b = max(1-auc_b, auc_b)
-                                
-                        
+                            
                         auc_b_columns.append(auc_b)
                     if self.compound_bias_method=="avg":
                         auc_b = np.mean(auc_b_columns)
@@ -641,14 +620,14 @@ class FairDecisionTreeClassifier():
     
 class FairRandomForestClassifier():
     def __init__(self, n_estimators=500, n_jobs=-1,
-        n_bins=2, min_leaf=1, max_depth=2, n_samples=1.0, max_features="auto", bootstrap=True, random_state=42,
+        n_bins=2, min_leaf=2, max_depth=2, n_samples=1.0, max_features="auto", bootstrap=True, random_state=42,
         criterion="auc_sub", bias_method="avg", compound_bias_method="xtr", orthogonality=.5
         ):
         """
         Bias Constraint Forest Classifier
         n_estimators -> int: BCDTress to generate
         n_bins -> int: feature quantiles to evaluate at each split
-        min_leaf -> int: largest number of samples for a node to stop splitting
+        min_leaf -> int: number of samples for a node to stop splitting
         max_depth -> int: max number of allowed splits per tree
         n_samples -> int: number of samples to bootstrap
                   -> float: proportion of samples to bootstrap
@@ -701,7 +680,11 @@ class FairRandomForestClassifier():
         self.trees = dts
         
     def fit(self, X, y, s, verbose=False):
-      
+        """
+        X -> any_dim pandas.df or np.array: numerical/categorical
+        y -> one_dim pandas.df or np.array: only binary
+        s -> any_dim pandas.df or np.array: columns must be binary
+        """
         def batch(iterable, n_jobs=1):
             if n_jobs==-1:
                 n_jobs = multiprocessing.cpu_count() # - 1 # -1 so that our laptop doesn't freeze
