@@ -10,4 +10,4 @@ n_estimators = 500
 max_features = "sqrt"
 orthogonalities = np.linspace(0,1,11).round(2)
 methods = ["local_sub", "kamiran_sub", "kamiran_div", "faht"]
-datasets = ["bank_age", "adult_race", "adult_gender", "adult_multiple", "recidivism_race", "recidivism_gender"]
+datasets = ["bank_age", "adult_race", "adult_gender", "adult_multiple_1", "adult_multiple_2", "recidivism_race", "recidivism_gender"]
