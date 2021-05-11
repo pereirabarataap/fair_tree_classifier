@@ -29,9 +29,20 @@ def make_setup(
         joblib.dump(X, dataset_folder+"/X.pkl")
         joblib.dump(y, dataset_folder+"/y.pkl")
         joblib.dump(s, dataset_folder+"/s.pkl")
-        splitter = SKF(n_splits=n_folds, shuffle=True, random_state=random_state)
+        # stratifying splits w.r.t [y, s]
+        strata = []
+        for i in range(len(X)):
+            row = str(y[i])
+            if len(s.shape) == 1: # if only single binary sens attr
+                row += str(s[i])
+
+            else:
+                for j in range(s.shape[1]):
+                    row += str(s[i,j])
+            strata.append(row)
         fold = 0
-        for train_idx, test_idx in splitter.split(X, y):
+        splitter = SKF(n_splits=n_folds, shuffle=True, random_state=random_state)
+        for train_idx, test_idx in splitter.split(X, strata):
             joblib.dump(test_idx, dataset_folder+"/"+str(fold)+"_test_idx.pkl")
             joblib.dump(train_idx, dataset_folder+"/"+str(fold)+"_train_idx.pkl")
             fold += 1
