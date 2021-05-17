@@ -18,8 +18,8 @@ clf = FairRandomForestClassifier(
 clf.fit(X, y, s)
 y_prob = clf.predict_proba(X)[:,1]
 
-y_auc = roc_auc_score(y, y_prob)
-s_auc = sns_auc_score(s, y_prob)
+y_auc = roc_auc_score(y, y_prob) # ---> classification auc
+s_auc = sns_auc_score(s, y_prob) # ---> sensitive auc
 ```
 
 ## Reproducibility
