@@ -22,7 +22,7 @@ y_auc = roc_auc_score(y, y_prob)
 s_auc = sns_auc_score(s, y_prob)
 ```
 
-## Reproduce
+## Reproducibility
 To reproduce the entirety of our experiments, simply run the <code>reproduce.ipynb</code> jupyter notebook in a Python environment.</br>
 Please run the following snippets prior to the run:
 
