@@ -24,7 +24,7 @@ s_auc = sns_auc_score(s, y_prob) # ---> sensitive auc
 
 ## Reproducibility
 To reproduce the entirety of our experiments, simply run the <code>reproduce.ipynb</code> jupyter notebook in a Python environment.</br>
-Expected compute time: <code>24 hours<\code> using <code>64 AMD EPYC 7601-kernen @ 2.40 GHz (128 threads)<\code>.
+Expected compute time: <code>24 hours</code> using <code>64 AMD EPYC 7601-kernen @ 2.40 GHz (128 threads)</code>.
 Please run the following snippets prior to the run:
 
 <code>pip install openml;</code>
