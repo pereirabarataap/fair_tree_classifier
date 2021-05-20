@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 import joblib
 from datasets import *
 from shutil import rmtree
@@ -194,16 +195,22 @@ def run_experiments(
                                 max_features=max_features,
                                 orthogonality=orthogonality,
                             )
-                            file["start"] = datetime.now()
+                            
+                            file["real_start"] = datetime.now()
+                            file["process_start"] = time.process_time()
+                            file["performance_start"] = time.perf_counter()
                             clf.fit(X_train, y_train, s_train)
+                            file["performance_stop"] = time.perf_counter()
+                            file["process_stop"] = time.process_time()
+                            file["real_stop"] = datetime.now()
+                            
                             p_test = clf.predict_proba(X_test)[:,1]
                             p_train = clf.predict_proba(X_train)[:,1]
-                            file["stop"] = datetime.now()
                             file["p_train"] = p_train
                             file["p_test"] = p_test
                             joblib.dump(file, file_path)
                             print_line = str(datetime.now()) + " " + method + " " + dataset
-                            print_line += " orthogonality=" + str(orthogonality) + " fold=" + str(fold) + " time: " + str(file["stop"] - file["start"])
+                            print_line += " orthogonality=" + str(orthogonality) + " fold=" + str(fold) + " time: " + str(file["real_stop"] - file["real_start"])
                             sys.stdout.write("\r" + str(print_line)+"\t\t\t\t\t\t")
                             sys.stdout.flush()
 
@@ -228,16 +235,22 @@ def run_experiments(
                             n_estimators=n_estimators,
                             max_features=max_features,
                         )
-                        file["start"] = datetime.now()
+                        
+                        file["real_start"] = datetime.now()
+                        file["process_start"] = time.process_time()
+                        file["performance_start"] = time.perf_counter()
                         clf.fit(X_train, y_train, s_train)
+                        file["performance_stop"] = time.perf_counter()
+                        file["process_stop"] = time.process_time()
+                        file["real_stop"] = datetime.now()
+                            
                         p_test = clf.predict_proba(X_test)[:,1]
                         p_train = clf.predict_proba(X_train)[:,1]
-                        file["stop"] = datetime.now()
                         file["p_train"] = p_train
                         file["p_test"] = p_test
                         joblib.dump(file, file_path)
                         print_line = str(datetime.now()) + " " + method + " " + dataset
-                        print_line += " fold=" + str(fold) + " time: " + str(file["stop"] - file["start"])
+                        print_line += " fold=" + str(fold) + " time: " + str(file["real_stop"] - file["real_start"])
                         sys.stdout.write("\r" + str(print_line)+"\t\t\t\t\t\t")
                         sys.stdout.flush()
         
@@ -266,16 +279,22 @@ def run_experiments(
                                 max_features=max_features,
                                 orthogonality=orthogonality,
                             )
-                            file["start"] = datetime.now()
+                            
+                            file["real_start"] = datetime.now()
+                            file["process_start"] = time.process_time()
+                            file["performance_start"] = time.perf_counter()
                             clf.fit(X_train, y_train, s_train)
+                            file["performance_stop"] = time.perf_counter()
+                            file["process_stop"] = time.process_time()
+                            file["real_stop"] = datetime.now()
+                            
                             p_test = clf.predict_proba(X_test)[:,1]
                             p_train = clf.predict_proba(X_train)[:,1]
-                            file["stop"] = datetime.now()
                             file["p_train"] = p_train
                             file["p_test"] = p_test
                             joblib.dump(file, file_path)
                             print_line = str(datetime.now()) + " " + method + " " + dataset
-                            print_line += " orthogonality=" + str(orthogonality) + " fold=" + str(fold) + " time: " + str(file["stop"] - file["start"])
+                            print_line += " orthogonality=" + str(orthogonality) + " fold=" + str(fold) + " time: " + str(file["real_stop"] - file["real_start"])
                             sys.stdout.write("\r" + str(print_line)+"\t\t\t\t\t\t")
                             sys.stdout.flush()
                             
