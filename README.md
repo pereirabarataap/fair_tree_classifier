@@ -1,4 +1,4 @@
-# Fair Tree Learning
+# Fair Tree Classifier using Strong Demographic Parity
 
 ## Usage
 ```python
