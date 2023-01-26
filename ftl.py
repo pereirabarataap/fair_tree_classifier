@@ -450,6 +450,7 @@ class FairRandomForestClassifier():
                 tree.fit(X, y, s)
             return batch_trees
         
+        # for compatibility with scikit-learn since sklearn fit() methods only take X, y
         self.classes_ = np.unique(y)
         self.s = np.array(s).astype(object) if (
             "fit_params" not in list(kwargs.keys())
