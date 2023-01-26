@@ -1,18 +1,10 @@
 import warnings
 import numpy as np
 import pandas as pd
-from math import ceil
 import multiprocessing
-from tqdm.auto import tqdm
+from scipy import stats as st
 from copy import deepcopy as copy
 from joblib import delayed, Parallel
-from scipy.stats import mode, entropy
-from sklearn.metrics import roc_auc_score
-
-def sns_auc_score(s_true, y_score):
-    s_auc = roc_auc_score(s_true, y_score)
-    s_auc = max(1-s_auc, s_auc)
-    return s_auc
 
 class FairDecisionTreeClassifier():
     
