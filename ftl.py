@@ -41,8 +41,13 @@ class FairDecisionTreeClassifier():
         kwargs -> for compatibility with scikit-learn: fit_params in cross_validate()
         """
         
+        # we use pandas to sort out between the numerical and categorical variables
+        if "pandas" not in str(type(X)):
+            X = pd.DataFrame(X)
+            
         self.X = X
         self.y = np.array(y).astype(int)
+        
         # for compatibility with scikit-learn since sklearn fit() methods only take X, y
         self.s = np.array(s).astype(object) if (
             "fit_params" not in list(kwargs.keys())
@@ -248,7 +253,9 @@ class FairDecisionTreeClassifier():
         del self.s
            
     def predict_proba(self, X):
-        
+        if "pandas" not in str(type(X)):
+            X = pd.DataFrame(X)
+            
         X = X[self.features]
         numerics = ['int16', 'int32', 'int64', 'float16', 'float32', 'float64']
         categorical_part = X.select_dtypes(exclude=numerics)
