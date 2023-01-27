@@ -176,8 +176,8 @@ class FairDecisionTreeClassifier():
                     auc_s = max(auc_s_list)
 
                     scaff_parent = (1-self.orthogonality)*0.5 - self.orthogonality*0.5
-                    scaff_children = (1-self.orthogonality)*auc_y - self.orthogonality*auc_s
-                    scaff_gain = scaff_children - scaff_parent
+                    scaff_child = (1-self.orthogonality)*auc_y - self.orthogonality*auc_s
+                    scaff_gain = scaff_child - scaff_parent
 
                     if self.split_info_norm=="entropy":
                         split_info = st.entropy([left_bool.sum(), right_bool.sum()], base=2)
@@ -217,8 +217,6 @@ class FairDecisionTreeClassifier():
         # recursively grow the actual tree ---> {split1: {...}}
         def build_tree(indexs, depth=0):
             tree={}
-            depth = copy(depth)
-            indexs = copy(indexs)
             if (                
                 len(np.unique(self.y[indexs]))==1 or ( # no need to split if there is already only 1 y class
                 indexs.sum()<=self.min_samples_leaf) or ( # minimum number to consider a node as a leaf
@@ -237,8 +235,8 @@ class FairDecisionTreeClassifier():
                     right_indexs = (~self.feature_value_idx_bool[feature][value]) & indexs
 
                     tree[(feature, value)] = {
-                        "<": build_tree(left_indexs, depth=copy(depth+1)),
-                        ">=":  build_tree(right_indexs, depth=copy(depth+1))
+                        "<": build_tree(left_indexs, depth=depth+1),
+                        ">=":  build_tree(right_indexs, depth=depth+1)
                     }
 
                     return tree
@@ -450,7 +448,6 @@ class FairRandomForestClassifier():
                 tree.fit(X, y, s)
             return batch_trees
         
-        # for compatibility with scikit-learn since sklearn fit() methods only take X, y
         self.classes_ = np.unique(y)
         self.s = np.array(s).astype(object) if (
             "fit_params" not in list(kwargs.keys())
@@ -466,9 +463,9 @@ class FairRandomForestClassifier():
             fit_batches_trees = Parallel(n_jobs=self.n_jobs)(
                 delayed(fit_batch)(
                     batch_trees, 
-                    copy(X), 
-                    copy(y), 
-                    copy(s), 
+                    X,
+                    y, 
+                    s, 
                 ) for batch_trees in batches_trees
             )
             trees = [tree for fit_batch_trees in fit_batches_trees for tree in fit_batch_trees]
