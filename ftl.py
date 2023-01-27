@@ -4,6 +4,7 @@ import multiprocessing
 from scipy import stats as st
 from copy import deepcopy as copy
 from joblib import delayed, Parallel
+from sklearn.preprocessing import OneHotEncoder
 
 class FairDecisionTreeClassifier():
     
