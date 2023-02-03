@@ -2,7 +2,7 @@
 
 ## Usage
 ```python
-from ftl import *
+from fair_trees import *
 from datasets import *
 
 X, y, s = get_recidivism_gender(show=False)
@@ -19,7 +19,7 @@ clf.fit(X, y, s)
 y_prob = clf.predict_proba(X)[:,1]
 
 y_auc = roc_auc_score(y, y_prob) # ---> classification auc
-s_auc = sns_auc_score(s, y_prob) # ---> sensitive auc
+s_auc = max(roc_auc_score(s, y_prob), 1 - roc_auc_score(s, y_prob)) # ---> sensitive auc
 ```
 
 ## Reproducibility
