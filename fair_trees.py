@@ -600,7 +600,10 @@ class FairRandomForestClassifier():
         max_features="auto",
         kamiran_method=None,
         split_info_norm=None,
-        sampling_proportion=1 - np.exp(-1), # the estimate proportion of unique samples with boot=True
+        sampling_proportion=1 - np.exp(-1), 
+        # the estimate proportion of unique samples
+        # equivalent to sampling_proportion=1, bootstrap=True
+        # https://stats.stackexchange.com/questions/126107/
     ):
         """
         Fair Random Forest Classifier
