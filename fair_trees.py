@@ -170,7 +170,6 @@ class FairDecisionTreeClassifier():
             def evaluate_split(feature, value, indexs):
                 left_bool = self.feature_value_idx_bool[feature][value] & indexs
                 right_bool = (~self.feature_value_idx_bool[feature][value]) & indexs
-                
                 # if split results in 2 non-empty partitions with min samples leaf size
                 if (left_bool.sum() >= self.min_samples_leaf) and (right_bool.sum() >= self.min_samples_leaf):
                     # focusing on either left or right bool is fine as long as we take the max auc
@@ -200,13 +199,11 @@ class FairDecisionTreeClassifier():
                         else:
                             auc_s = 1
                             auc_s_list.append(auc_s)
-                            break 
+                            break                         
                     auc_s = max(auc_s_list)
-
-                    # scaff_parent = (1-self.orthogonality)*0.5 - self.orthogonality*0.5
+    
                     scaff_child = (1-self.orthogonality)*auc_y - self.orthogonality*auc_s
                     scaff_gain = scaff_child - scaff_parent
-
                     if self.split_info_norm=="entropy":
                         split_info = st.entropy([left_bool.sum(), right_bool.sum()], base=2)
                     elif self.split_info_norm=="entropy_inv":
@@ -289,19 +286,21 @@ class FairDecisionTreeClassifier():
             best_value = np.nan
             best_feature  = np.nan
             for feature in range(self.X.shape[1]):
-                unique_values = np.unique(self.X[indexs,feature])
-                unique_values = np.intersect1d(
-                    unique_values,
-                    np.array(list(self.feature_value_idx_bool[feature].keys()))
-                )
+                unique_values = np.unique(self.X[indexs,feature]) 
                 if len(unique_values) >= 2:
-                    for value in unique_values[1:]:
+                    unique_intersect = np.intersect1d(
+                        unique_values[1:],
+                        np.array(list(self.feature_value_idx_bool[feature].keys()))
+                    )
+                    # we know that the unique_values[0] is no-good as splitter 
+                    # it would generate a left empty node, and a right full node
+                    for value in unique_intersect:
                         split_score = evaluate_split(feature, value, indexs)
                         if split_score >= best_score:
                             best_score = split_score
                             best_feature = feature
                             best_value = value
-            
+        
             return best_score, best_feature, best_value
         
         # recursively grow the actual tree ---> {split1: {...}}
@@ -337,6 +336,7 @@ class FairDecisionTreeClassifier():
                         return class_prob, delta_acc, delta_disc, abs(delta_disc/delta_acc)
                 
             else:
+                
                 score, feature, value = get_best_split(indexs)
                 if np.isnan(feature): ## in case no more feature values exist for splitting
                     class_prob = (self.y_pos_bool & indexs).sum() / indexs.sum()
@@ -371,9 +371,8 @@ class FairDecisionTreeClassifier():
                         "<": build_tree(left_indexs, depth=depth+1),
                         ">=":  build_tree(right_indexs, depth=depth+1)
                     }
-
                     return tree
-        
+                
         self.tree = build_tree(self.indexs)
         self.is_fit = True
 
@@ -457,7 +456,6 @@ class FairDecisionTreeClassifier():
                 return kamiran_discrimination
         
             kamiran_discrimination = kamiran_discrimination(self.X, self.s)
-            # print(kamiran_discrimination, "\n")
             if kamiran_discrimination != 0:
                 # grabbing leaves and paths to check which ones to swap
                 paths = []
@@ -466,11 +464,9 @@ class FairDecisionTreeClassifier():
                     class_label, delta_acc, delta_disc, score = leaf
                     # discriminations must have different signs
                     # since we want to reduce the abs(bias)
-                    # print(leaf)
                     if (delta_disc * kamiran_discrimination) < 0:
                         paths.append(path)
                         leaves.append(leaf)
-                        # print("saved", "\n")
                         
                 # checking which leaves are best to swap and saving their paths
                 paths_to_swap = []
@@ -494,7 +490,6 @@ class FairDecisionTreeClassifier():
                             path_to_swap = paths[ranked_idx]
                             paths_to_swap.append(path_to_swap)
                             
-                # print("\n",paths_to_swap)
                 swap_tree = copy(self.tree)
                 for path in paths_to_swap:
                     path_str = ""
@@ -691,9 +686,9 @@ class FairRandomForestClassifier():
         
         np.random.seed(self.random_state)
         # this is the range of all possible seed values in numpy
-        random_states = np.random.randint(0, 2**32, self.n_estimators) 
+        random_states = np.random.randint(0, 2**31, self.n_estimators) 
         while len(np.unique(random_states)) != len(random_states):
-            random_states = np.random.randint(0, 2**32, self.n_estimators)
+            random_states = np.random.randint(0, 2**31, self.n_estimators)
         
         trees = [
             FairDecisionTreeClassifier(
