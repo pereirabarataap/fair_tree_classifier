@@ -503,7 +503,7 @@ class FairDecisionTreeClassifier():
                         path_str += "[("+str(feature)+", "+str(value)+")]['"+sign+"']"
 
                     class_label, delta_acc, delta_disc, score = eval("swap_tree" + path_str)
-                    swap_leaf = (1 - class_label, None, None, None) # no need for the scores anymore # *-1 + 1, delta_acc, delta_disc, score
+                    swap_leaf = (1 - class_label, None, None, None) # no need for the scores anymore
                     command = "swap_tree" + path_str + " = "+ str(swap_leaf)
                     exec(command)
                 
