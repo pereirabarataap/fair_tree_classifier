@@ -6,6 +6,16 @@ from copy import deepcopy as copy
 from joblib import delayed, Parallel
 from sklearn.preprocessing import OneHotEncoder
 
+def demographic_parity(s_bool, y_pred):
+    return (s_bool & (y_pred==1)).sum() / s_bool.sum() - \
+    ((~s_bool) & (y_pred==1)).sum() / (~s_bool).sum()
+    
+def sensitive_auc(s_bool, y_prob):
+    return max(
+        roc_auc_score(s_bool, y_prob),
+        1 - roc_auc_score(s_bool, y_prob)
+    )
+    
 class FairDecisionTreeClassifier():
     
     def __init__(
@@ -773,7 +783,7 @@ class FairRandomForestClassifier():
             if not specified, the orthogonality parameter given in init is used instead
         mean_type -> str
             {"prob", "pred"}
-            Method to compute the probailities across all trees upon which the threshold of np.mean([0.5, self.pred_th]) is applied
+            Method to compute the probailities across all trees, with which the np.mean([0.5, self.pred_th]) is the threshold
             Note: self.pred_th is given as the proportion of positive class instances [P(Y=1)]
             "prob" computes the mean of all tree probabilities (the probability of Y=1 of each terminal node)
             "pred" computes the mean of all tree predicitons {0, 1}
