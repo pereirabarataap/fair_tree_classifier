@@ -4,6 +4,7 @@ import multiprocessing
 from scipy import stats as st
 from copy import deepcopy as copy
 from joblib import delayed, Parallel
+from sklearn.metrics import roc_auc_score
 from sklearn.preprocessing import OneHotEncoder
 
 def demographic_parity(s_bool, y_pred):
@@ -758,18 +759,57 @@ class FairRandomForestClassifier():
             "prob" computes the mean of all tree probabilities (the probability of Y=1 of each terminal node)
             "pred" computes the mean of all tree predicitons {0, 1}
         """
-        if mean_type=="prob":
+        
+        def make_batches(iterable, n_jobs=-1):
+            if n_jobs==-1:
+                n_jobs = multiprocessing.cpu_count()
+            len_iterable = len(iterable)
+            if len_iterable < n_jobs:
+                n_jobs = len_iterable
+            batches = [[] for i in range(n_jobs)]
+            for i in range(len_iterable):
+                item = iterable[i]
+                batches[i%n_jobs].append(item)
+            return batches
+
+        def predict_proba_batch(batch_trees, X, theta, mean_type):
+            batch_prob = []
+            if mean_type=="prob":
+                for tree in batch_trees:
+                    batch_prob.append(tree.predict_proba(X, theta=theta)[:,1])
+            elif mean_type=="pred":
+                for tree in batch_trees:
+                    batch_prob.append(tree.predict(X, theta=theta))
+            return batch_prob
+        
+        if self.n_jobs==1:
+            if mean_type=="prob":
+                y_prob = np.mean(
+                    [tree.predict_proba(X, theta=theta)[:,1] for tree in self.trees], 
+                    axis=0
+                ).reshape(-1,1)
+
+            elif mean_type=="pred":
+                y_prob = np.mean(
+                    [tree.predict(X, theta=theta) for tree in self.trees], 
+                    axis=0
+                ).reshape(-1,1)
+                
+        else:
+            batches_trees = make_batches(self.trees, n_jobs=self.n_jobs)
+            proba_batches = Parallel(n_jobs=self.n_jobs)(
+                delayed(predict_proba_batch)(
+                    batch_trees, 
+                    X,
+                    theta,
+                    mean_type
+                ) for batch_trees in batches_trees
+            )
             y_prob = np.mean(
-                [tree.predict_proba(X, theta=theta)[:,1] for tree in self.trees], 
+                [prob for proba_batch in proba_batches for prob in proba_batch],
                 axis=0
             ).reshape(-1,1)
-        
-        elif mean_type=="pred":
-            y_prob = np.mean(
-                [tree.predict(X, theta=theta) for tree in self.trees], 
-                axis=0
-            ).reshape(-1,1)
-        
+         
         return np.concatenate(
             (1- y_prob, y_prob), 
             axis=1
