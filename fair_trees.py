@@ -21,7 +21,7 @@ class FairDecisionTreeClassifier():
     
     def __init__(
         self,
-        n_bins=None,
+        n_bins=256,
         max_depth=None,
         bootstrap=False,
         random_state=42,
@@ -56,7 +56,7 @@ class FairDecisionTreeClassifier():
         kwargs -> for compatibility with scikit-learn: fit_params in cross_validate()
         """
         
-        self.X_source = copy(X)
+        # self.X_source = copy(X)
         # we use pandas to sort out between the numerical and categorical variables
         if "pandas" not in str(type(X)):
             X = pd.DataFrame(X)
@@ -71,8 +71,6 @@ class FairDecisionTreeClassifier():
             np.array(kwargs["fit_params"]["s"]).astype(object)
         )
         
-        np.random.seed(self.random_state)
-       
         if (len(self.X)!=len(self.y)) or (len(self.X)!=len(self.s)) or (len(self.y)!=len(self.s)):
             raise Exception("X, y, and s lenghts do not match")    
         if len(self.y.shape)==1 or len(self.y.ravel())==len(self.X):
@@ -80,17 +78,27 @@ class FairDecisionTreeClassifier():
         if len(self.s.shape)==1 or len(self.s.ravel())==len(self.X):
             self.s = self.s.reshape(-1,1)
         
+        np.random.seed(self.random_state)
         if (self.sampling_proportion!=1.0) or (self.bootstrap):
-            idx = np.random.choice(
-                range(len(self.X)),
-                size=int(round(len(self.X) * self.sampling_proportion)),
-                replace=self.bootstrap
+            indexs_to_keep = []
+            # ensuring sampling is stratified
+            split_groups = (
+                pd.DataFrame(self.s).apply(lambda x: "_".join(x), axis=1) + "_" + pd.Series(self.y).astype(str)
             )
-            self.X = self.X.iloc[idx]
-            self.y = self.y[idx]
-            self.s = self.s[idx]
-        
-        
+            all_indexs = np.array(range(len(X)))
+            for split_group in np.unique(split_groups):
+                indexs = all_indexs[(split_groups==split_group).values].copy()
+                sampling_n = max(1, int(round(len(indexs) * self.sampling_proportion)))
+                indexs_to_keep += np.random.choice(
+                    indexs,
+                    size=sampling_n,
+                    replace=self.bootstrap
+                ).tolist()
+            indexs_to_keep = np.array(indexs_to_keep)                    
+            self.X = self.X.iloc[indexs_to_keep]
+            self.y = self.y[indexs_to_keep]
+            self.s = self.s[indexs_to_keep]
+
         # computing once
         self.y_pos_bool = self.y==1
         self.y_neg_bool = ~self.y_pos_bool      
