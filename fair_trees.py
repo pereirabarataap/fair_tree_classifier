@@ -11,10 +11,19 @@ def demographic_parity(s_bool, y_pred):
     return (s_bool & (y_pred==1)).sum() / s_bool.sum() - \
     ((~s_bool) & (y_pred==1)).sum() / (~s_bool).sum()
     
-def sensitive_auc(s_bool, y_prob):
+def sensitive_auc(s, y_prob):
+    s = np.array(s)
+    if len(s.shape)==1:
+        s = s.reshape(-1,1)
     return max(
-        roc_auc_score(s_bool, y_prob),
-        1 - roc_auc_score(s_bool, y_prob)
+        [
+            max(
+                roc_auc_score(s[:, s_column]==s_value, y_prob),
+                1 - roc_auc_score(s[:, s_column]==s_value, y_prob)
+            ) if (len(np.unique(s[:, s_column]))>1) else 1
+                for s_column in range(s.shape[1])
+                    for s_value in np.unique(s[:, s_column])
+        ]
     )
     
 class FairDecisionTreeClassifier():
@@ -26,13 +35,15 @@ class FairDecisionTreeClassifier():
         bootstrap=False,
         random_state=42,
         orthogonality=.5, 
+        max_features=1.0,
         criterion="scaff",
         min_samples_leaf=1,
         min_samples_split=2, 
-        max_features=1.0,
         kamiran_method=None,
         split_info_norm=None,
+        oob_pruning=False,
         sampling_proportion=1.0, 
+        
     ):
         self.is_fit = False
         self.criterion = criterion
@@ -40,6 +51,7 @@ class FairDecisionTreeClassifier():
         self.max_features = max_features
         self.random_state = random_state
         self.orthogonality = orthogonality
+        self.oob_pruning = oob_pruning
         self.split_info_norm = split_info_norm
         self.min_samples_leaf = min_samples_leaf
         self.min_samples_split = min_samples_split
@@ -65,10 +77,10 @@ class FairDecisionTreeClassifier():
         self.y = np.array(y).astype(int)
         
         # for compatibility with scikit-learn since sklearn fit() methods only take X, y
-        self.s = np.array(s).astype(object) if (
+        self.s = np.array(s).astype(str) if (
             "fit_params" not in list(kwargs.keys())
         ) else (
-            np.array(kwargs["fit_params"]["s"]).astype(object)
+            np.array(kwargs["fit_params"]["s"]).astype(str)
         )
         
         if (len(self.X)!=len(self.y)) or (len(self.X)!=len(self.s)) or (len(self.y)!=len(self.s)):
@@ -83,9 +95,13 @@ class FairDecisionTreeClassifier():
             indexs_to_keep = []
             # ensuring sampling is stratified
             split_groups = (
-                pd.DataFrame(self.s).apply(lambda x: "_".join(x), axis=1) + "_" + pd.Series(self.y).astype(str)
+                pd.DataFrame(self.s).apply(lambda x: "_".join(x), axis=1).astype(str) + "_" + pd.Series(self.y).astype(str) if (
+                    self.s.shape[1] > 1
+                ) else (
+                    pd.Series(self.s.ravel()).astype(str) + "_" + pd.Series(self.y).astype(str) 
+                )
             )
-            all_indexs = np.array(range(len(X)))
+            all_indexs = np.array(range(len(self.X)))
             for split_group in np.unique(split_groups):
                 indexs = all_indexs[(split_groups==split_group).values].copy()
                 sampling_n = max(1, int(round(len(indexs) * self.sampling_proportion)))
@@ -98,7 +114,41 @@ class FairDecisionTreeClassifier():
             self.X = self.X.iloc[indexs_to_keep]
             self.y = self.y[indexs_to_keep]
             self.s = self.s[indexs_to_keep]
-
+        
+        # define validation set as 10% of training set
+        if self.oob_pruning and self.criterion=="scaff":
+            training_idx = []
+            # ensuring sampling is stratified
+            split_groups = (
+                pd.DataFrame(self.s).apply(lambda x: "_".join(x), axis=1).astype(str) + "_" + pd.Series(self.y).astype(str) if (
+                    self.s.shape[1] > 1
+                ) else (
+                    pd.Series(self.s.ravel()).astype(str) + "_" + pd.Series(self.y).astype(str) 
+                )
+            )
+            if type(self.oob_pruning)==type(True):
+                train_proportion = 0.9
+            else:
+                train_proportion = 1 - self.oob_pruning
+            all_indexs = np.array(range(len(self.X)))
+            for split_group in np.unique(split_groups):
+                indexs = all_indexs[(split_groups==split_group).values].copy()
+                sampling_n = max(1, int(round(len(indexs) * train_proportion)))
+                training_idx += np.random.choice(
+                    indexs,
+                    size=sampling_n,
+                    replace=False
+                ).tolist()
+            training_idx = np.array(training_idx)                    
+            validation_idx = np.array(list(set(all_indexs).difference(set(training_idx))))
+            
+            self.X_validation = self.X.iloc[validation_idx].copy()
+            self.y_validation = self.y[validation_idx].copy()
+            self.s_validation = self.s[validation_idx].copy()
+            self.X = self.X.iloc[training_idx]
+            self.y = self.y[training_idx]
+            self.s = self.s[training_idx]
+        
         # computing once
         self.y_pos_bool = self.y==1
         self.y_neg_bool = ~self.y_pos_bool      
@@ -150,7 +200,6 @@ class FairDecisionTreeClassifier():
         numeric_part = self.X.select_dtypes(include=numerics)
         # OHE to be applied to X from predict method
         self.ohe = OneHotEncoder(handle_unknown="ignore").fit(categorical_part)
-        
         # X is now an array
         self.X = np.concatenate(
             (
@@ -159,6 +208,17 @@ class FairDecisionTreeClassifier():
             ), axis= 1
         )
         
+        if self.oob_pruning and self.criterion=="scaff":
+            self.X_validation = self.X_validation[self.features]
+            categorical_part_val = self.X_validation.select_dtypes(exclude=numerics)
+            numeric_part_val = self.X_validation.select_dtypes(include=numerics)
+            self.X_validation = np.concatenate(
+                (
+                    numeric_part_val.values.astype(float),
+                    self.ohe.transform(categorical_part_val).toarray()
+                ), axis= 1
+            )
+            
         # feature_value_idx_bool[feature][value] = idx_bool
         # represents the indexs for which feature < value
         # ~feature_value_idx_bool[feature][value]: feature >= value
@@ -355,7 +415,6 @@ class FairDecisionTreeClassifier():
                         return class_prob, delta_acc, delta_disc, abs(delta_disc/delta_acc)
                 
             else:
-                
                 score, feature, value = get_best_split(indexs)
                 if np.isnan(feature): ## in case no more feature values exist for splitting
                     class_prob = (self.y_pos_bool & indexs).sum() / indexs.sum()
@@ -387,14 +446,14 @@ class FairDecisionTreeClassifier():
                     left_indexs = self.feature_value_idx_bool[feature][value] & indexs
                     right_indexs = (~self.feature_value_idx_bool[feature][value]) & indexs
                     tree[(feature, value)] = {
+                        "prob": (self.y[indexs]).sum() / indexs.sum(),
                         "<": build_tree(left_indexs, depth=depth+1),
-                        ">=":  build_tree(right_indexs, depth=depth+1)
+                        ">=":  build_tree(right_indexs, depth=depth+1),                        
                     }
                     return tree
                 
         self.tree = build_tree(self.indexs)
-        self.is_fit = True
-
+        
         def get_paths_leaves(tree, path=[]):
             output=[]
             if type(tree)==type({}):
@@ -408,9 +467,75 @@ class FairDecisionTreeClassifier():
             else:
                 leaf = tree
                 return [[path, leaf]]
+        
+        #  prune tree with X_validation
+        if self.oob_pruning and self.criterion=="scaff":
+            def get_prob(X, tree, y_prob=None, idx_bool=None):
+                y_prob = np.repeat(np.nan, len(X)) if (y_prob is None) else (y_prob)
+                idx_bool = np.repeat(True, len(X)) if (idx_bool is None) else (idx_bool)
+                if type(tree)==type({}):
+                    feature, value  = list(tree.keys())[0]
+                    left_bool =  (X[:,feature] < value) & idx_bool
+                    right_bool = (X[:,feature] >= value) & idx_bool
+                    sub_tree_left = tree[(feature, value)]["<"]
+                    sub_tree_right = tree[(feature, value)][">="]
+                    y_prob = get_prob(X, sub_tree_left, y_prob, left_bool)
+                    y_prob = get_prob(X, sub_tree_right, y_prob, right_bool)
+                    return y_prob
 
+                else:
+                    y_prob[idx_bool] = tree
+                    return y_prob
+
+            y_prob = get_prob(self.X_validation, self.tree)
+            auc_y = roc_auc_score(self.y_validation, y_prob) 
+            auc_s = sensitive_auc(self.s_validation, y_prob) 
+            best_score = (1-self.orthogonality)*auc_y - self.orthogonality*auc_s
+            
+            stop_flag = 0     
+            while not stop_flag:
+                best_i = None
+                paths_leaves = get_paths_leaves(self.tree)
+                for i in range(len(paths_leaves)):
+                    path, _ = paths_leaves[i]
+                    sub_tree = copy(self.tree)
+                    str_path = "sub_tree"
+                    for sub_path in path[:-1]:
+                        feature, value, sign = sub_path
+                        str_loc = "[(" + str(feature) + "," + str(value) + ")]['" + sign+"']"
+                        str_path += str_loc
+                    feature, value, _ = path[-1]
+                    last_str_loc = "[(" + str(feature) + "," + str(value) + ")]['prob']"
+                    last_str_path = str_path + last_str_loc
+                    new_prob = eval(last_str_path)
+                    exec(str_path + " = " + str(new_prob))
+                    y_prob = get_prob(self.X_validation, sub_tree)
+                    auc_y = roc_auc_score(self.y_validation, y_prob) 
+                    auc_s = sensitive_auc(self.s_validation, y_prob) 
+                    new_score = (1-self.orthogonality)*auc_y - self.orthogonality*auc_s
+                    if new_score > best_score:
+                        best_score = new_score
+                        best_i = i
+
+                if best_i is not None:
+                    path, _ = paths_leaves[best_i]
+                    str_path = "self.tree"
+                    for sub_path in path[:-1]:
+                        feature, value, sign = sub_path
+                        str_loc = "[(" + str(feature) + "," + str(value) + ")]['" + sign+"']"
+                        str_path += str_loc
+                    feature, value, _ = path[-1]
+                    last_str_loc = "[(" + str(feature) + "," + str(value) + ")]['prob']"
+                    last_str_path = str_path + last_str_loc
+                    new_prob = eval(last_str_path)
+                    exec(str_path + " = " + str(new_prob))
+
+                else:
+                    stop_flag = 1
+        
         self.paths_leaves = get_paths_leaves(self.tree)
-           
+        self.is_fit = True
+        
     def predict_proba(self, X, theta=None):
         if "pandas" not in str(type(X)):
             X = pd.DataFrame(X)
@@ -554,6 +679,7 @@ class FairDecisionTreeClassifier():
                 "max_features": self.max_features,
                 "random_state": self.random_state,
                 "orthogonality": self.orthogonality,
+                "oob_pruning": self.oob_pruning,
                 "kamiran_method": self.kamiran_method,
                 "split_info_norm": self.split_info_norm,
                 "min_samples_leaf": self.min_samples_leaf,
@@ -570,6 +696,7 @@ class FairDecisionTreeClassifier():
                 "max_features": self.max_features,
                 "random_state": self.random_state,
                 "orthogonality": self.orthogonality,
+                "oob_pruning": self.oob_pruning,
                 "kamiran_method": self.kamiran_method,
                 "split_info_norm": self.split_info_norm,
                 "min_samples_leaf": self.min_samples_leaf,
@@ -587,6 +714,7 @@ class FairDecisionTreeClassifier():
                 "  max_features=" + str(self.max_features) + "\n" + \
                 "  random_state=" + str(self.random_state) + "\n" + \
                 "  orthogonality=" + str(self.orthogonality) + "\n" + \
+                "  oob_pruning=" + str(self.oob_pruning) + "\n" + \
                 "  kamiran_method=" + str(self.kamiran_method) + "\n" + \
                 "  split_info_norm=" + str(self.split_info_norm) + "\n" + \
                 "  min_samples_leaf=" +str(self.min_samples_leaf) + "\n" + \
@@ -609,6 +737,7 @@ class FairRandomForestClassifier():
         n_estimators=500,
         orthogonality=.5,
         criterion="scaff",
+        oob_pruning=False,
         min_samples_leaf=1,
         min_samples_split=2,
         max_features="auto",
@@ -647,12 +776,16 @@ class FairRandomForestClassifier():
         criterion -> str: 
             score criterion for splitting
             {"scaff", "kamiran"}
-        split_info_norm -> str
-            denominator in gain normalisation:
-            {"entropy", "entropy_inv", None}
         kamiran_method -> str
             operation to combine IGC and IGS when criterion=='kamiran'
             {"sum", "sub", "div"}
+        split_info_norm -> str
+            denominator in gain normalisation:
+            {"entropy", "entropy_inv", None}
+        oob_pruning -> bool, float
+            proportion of training data should be used as OutOfBag validation for pruning
+            if True, defaults to 0.2
+            {True, False}, [0,1]
         orthogonality -> int/float: 
             strength of fairness constraint in which:
             0 is no fairness constraint (i.e., 'traditional' classifier)
@@ -671,6 +804,7 @@ class FairRandomForestClassifier():
         self.max_features = max_features
         self.random_state = random_state
         self.orthogonality = orthogonality
+        self.oob_pruning = oob_pruning
         self.kamiran_method = kamiran_method
         self.split_info_norm = split_info_norm
         self.min_samples_leaf = min_samples_leaf
@@ -719,6 +853,7 @@ class FairRandomForestClassifier():
                 max_features=self.max_features, 
                 orthogonality=self.orthogonality,
                 kamiran_method=self.kamiran_method,
+                oob_pruning=self.oob_pruning,
                 split_info_norm=self.split_info_norm, 
                 min_samples_leaf=self.min_samples_leaf, 
                 min_samples_split=self.min_samples_split, 
@@ -854,6 +989,7 @@ class FairRandomForestClassifier():
                 "n_estimators": self.n_estimators,
                 "orthogonality": self.orthogonality,
                 "criterion": self.criterion,
+                "oob_pruning": self.oob_pruning,
                 "min_samples_leaf": self.min_samples_leaf,
                 "min_samples_split": self.min_samples_split,
                 "max_features": self.max_features,
@@ -870,6 +1006,7 @@ class FairRandomForestClassifier():
                 "n_estimators": self.n_estimators,
                 "orthogonality": self.orthogonality,
                 "criterion": self.criterion,
+                "oob_pruning": self.oob_pruning,
                 "min_samples_leaf": self.min_samples_leaf,
                 "min_samples_split": self.min_samples_split,
                 "max_features": self.max_features,
@@ -888,6 +1025,7 @@ class FairRandomForestClassifier():
                 "  random_state=" + str(self.random_state) + "\n" + \
                 "  n_estimators=" + str(self.n_estimators) + "\n" + \
                 "  orthogonality=" + str(self.orthogonality) + "\n" + \
+                "  oob_pruning=" + str(self.oob_pruning) + "\n" + \
                 "  split_info_norm=" + str(self.split_info_norm) + "\n" + \
                 "  min_samples_leaf=" +str(self.min_samples_leaf) + "\n" + \
                 "  min_samples_split=" +str(self.min_samples_split) + "\n" + \
