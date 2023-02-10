@@ -27,21 +27,20 @@ def sensitive_auc(s, y_prob):
     )
     
 class FairDecisionTreeClassifier():
-    
     def __init__(
         self,
         n_bins=256,
-        max_depth=None,
+        max_depth=7,
         bootstrap=False,
         random_state=42,
         orthogonality=.5, 
         max_features=1.0,
+        oob_pruning=True,
         criterion="scaff",
-        min_samples_leaf=1,
-        min_samples_split=2, 
+        min_samples_leaf=3,
+        min_samples_split=7, 
         kamiran_method=None,
         split_info_norm=None,
-        oob_pruning=False,
         sampling_proportion=1.0, 
         
     ):
@@ -110,44 +109,14 @@ class FairDecisionTreeClassifier():
                     size=sampling_n,
                     replace=self.bootstrap
                 ).tolist()
-            indexs_to_keep = np.array(indexs_to_keep)                    
-            self.X = self.X.iloc[indexs_to_keep]
-            self.y = self.y[indexs_to_keep]
-            self.s = self.s[indexs_to_keep]
-        
-        # define validation set as 10% of training set
-        if self.oob_pruning and self.criterion=="scaff":
-            training_idx = []
-            # ensuring sampling is stratified
-            split_groups = (
-                pd.DataFrame(self.s).apply(lambda x: "_".join(x), axis=1).astype(str) + "_" + pd.Series(self.y).astype(str) if (
-                    self.s.shape[1] > 1
-                ) else (
-                    pd.Series(self.s.ravel()).astype(str) + "_" + pd.Series(self.y).astype(str) 
-                )
-            )
-            if type(self.oob_pruning)==type(True):
-                train_proportion = 0.9
-            else:
-                train_proportion = 1 - self.oob_pruning
-            all_indexs = np.array(range(len(self.X)))
-            for split_group in np.unique(split_groups):
-                indexs = all_indexs[(split_groups==split_group).values].copy()
-                sampling_n = max(1, int(round(len(indexs) * train_proportion)))
-                training_idx += np.random.choice(
-                    indexs,
-                    size=sampling_n,
-                    replace=False
-                ).tolist()
-            training_idx = np.array(training_idx)                    
-            validation_idx = np.array(list(set(all_indexs).difference(set(training_idx))))
-            
+            indexs_to_keep = np.array(indexs_to_keep)
+            validation_idx = np.array(list(set(all_indexs).difference(set(indexs_to_keep))))
             self.X_validation = self.X.iloc[validation_idx].copy()
             self.y_validation = self.y[validation_idx].copy()
             self.s_validation = self.s[validation_idx].copy()
-            self.X = self.X.iloc[training_idx]
-            self.y = self.y[training_idx]
-            self.s = self.s[training_idx]
+            self.X = self.X.iloc[indexs_to_keep]
+            self.y = self.y[indexs_to_keep]
+            self.s = self.s[indexs_to_keep]
         
         # computing once
         self.y_pos_bool = self.y==1
@@ -731,19 +700,19 @@ class FairRandomForestClassifier():
         self, 
         n_jobs=-1,
         n_bins=256,
-        max_depth=None,
-        bootstrap=False, 
+        max_depth=7,
+        bootstrap=True, 
         random_state=42,
         n_estimators=500,
         orthogonality=.5,
+        oob_pruning=True,
         criterion="scaff",
-        oob_pruning=False,
-        min_samples_leaf=1,
-        min_samples_split=2,
+        min_samples_leaf=3,
+        min_samples_split=7,
         max_features="auto",
         kamiran_method=None,
         split_info_norm=None,
-        sampling_proportion=1 - np.exp(-1), 
+        sampling_proportion=1.0, 
         # the estimate proportion of unique samples
         # equivalent to sampling_proportion=1, bootstrap=True
         # https://stats.stackexchange.com/questions/126107/
@@ -782,10 +751,8 @@ class FairRandomForestClassifier():
         split_info_norm -> str
             denominator in gain normalisation:
             {"entropy", "entropy_inv", None}
-        oob_pruning -> bool, float
-            proportion of training data should be used as OutOfBag validation for pruning
-            if True, defaults to 0.2
-            {True, False}, [0,1]
+        oob_pruning -> bool
+            if out of bag samples (when sample_proportion!=1.0 or bootstrap==True) should be used to prune after fitting
         orthogonality -> int/float: 
             strength of fairness constraint in which:
             0 is no fairness constraint (i.e., 'traditional' classifier)
