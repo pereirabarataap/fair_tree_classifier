@@ -465,43 +465,48 @@ class FairDecisionTreeClassifier():
             while not stop_flag:
                 best_i = None
                 paths_leaves = get_paths_leaves(self.tree)
-                for i in range(len(paths_leaves)):
-                    path, _ = paths_leaves[i]
-                    sub_tree = copy(self.tree)
-                    str_path = "sub_tree"
-                    for sub_path in path[:-1]:
-                        feature, value, sign = sub_path
-                        str_loc = "[(" + str(feature) + "," + str(value) + ")]['" + sign+"']"
-                        str_path += str_loc
-                    feature, value, _ = path[-1]
-                    last_str_loc = "[(" + str(feature) + "," + str(value) + ")]['prob']"
-                    last_str_path = str_path + last_str_loc
-                    new_prob = eval(last_str_path)
-                    exec(str_path + " = " + str(new_prob))
-                    y_prob = get_prob(self.X_validation, sub_tree)
-                    auc_y = roc_auc_score(self.y_validation, y_prob) 
-                    auc_s = sensitive_auc(self.s_validation, y_prob) 
-                    new_score = (1-self.orthogonality)*auc_y - self.orthogonality*auc_s
-                    if new_score > best_score:
-                        best_score = new_score
-                        best_i = i
+                # len(paths_leaves)==1 means root node
+                if len(paths_leaves)>1:
+                    for i in range(len(paths_leaves)):
+                        path, _ = paths_leaves[i]
+                        sub_tree = copy(self.tree)
+                        str_path = "sub_tree"
+                        for sub_path in path[:-1]:
+                            feature, value, sign = sub_path
+                            str_loc = "[(" + str(feature) + "," + str(value) + ")]['" + sign+"']"
+                            str_path += str_loc
+                        feature, value, _ = path[-1]
+                        last_str_loc = "[(" + str(feature) + "," + str(value) + ")]['prob']"
+                        last_str_path = str_path + last_str_loc
+                        new_prob = eval(last_str_path)
+                        exec(str_path + " = " + str(new_prob))
+                        y_prob = get_prob(self.X_validation, sub_tree)
+                        auc_y = roc_auc_score(self.y_validation, y_prob) 
+                        auc_s = sensitive_auc(self.s_validation, y_prob) 
+                        new_score = (1-self.orthogonality)*auc_y - self.orthogonality*auc_s
+                        if new_score > best_score:
+                            best_score = new_score
+                            best_i = i
 
-                if best_i is not None:
-                    path, _ = paths_leaves[best_i]
-                    str_path = "self.tree"
-                    for sub_path in path[:-1]:
-                        feature, value, sign = sub_path
-                        str_loc = "[(" + str(feature) + "," + str(value) + ")]['" + sign+"']"
-                        str_path += str_loc
-                    feature, value, _ = path[-1]
-                    last_str_loc = "[(" + str(feature) + "," + str(value) + ")]['prob']"
-                    last_str_path = str_path + last_str_loc
-                    new_prob = eval(last_str_path)
-                    exec(str_path + " = " + str(new_prob))
+                    if best_i is not None:
+                        path, _ = paths_leaves[best_i]
+                        str_path = "self.tree"
+                        for sub_path in path[:-1]:
+                            feature, value, sign = sub_path
+                            str_loc = "[(" + str(feature) + "," + str(value) + ")]['" + sign+"']"
+                            str_path += str_loc
+                        feature, value, _ = path[-1]
+                        last_str_loc = "[(" + str(feature) + "," + str(value) + ")]['prob']"
+                        last_str_path = str_path + last_str_loc
+                        new_prob = eval(last_str_path)
+                        exec(str_path + " = " + str(new_prob))
 
+                    else:
+                        stop_flag = 1
+                        
                 else:
                     stop_flag = 1
-        
+                    
         self.paths_leaves = get_paths_leaves(self.tree)
         self.is_fit = True
         
