@@ -4,28 +4,114 @@ import multiprocessing
 from scipy import stats as st
 from copy import deepcopy as copy
 from joblib import delayed, Parallel
-from sklearn.metrics import roc_auc_score
 from sklearn.preprocessing import OneHotEncoder
+from sklearn.metrics import roc_auc_score, confusion_matrix
 
-def demographic_parity(s_bool, y_pred):
-    return (s_bool & (y_pred==1)).sum() / s_bool.sum() - \
-    ((~s_bool) & (y_pred==1)).sum() / (~s_bool).sum()
-    
-def sensitive_auc(s, y_prob):
+def demographic_parity_score(s, y_pred):
     s = np.array(s)
     if len(s.shape)==1:
         s = s.reshape(-1,1)
-    return max(
-        [
-            max(
-                roc_auc_score(s[:, s_column]==s_value, y_prob),
-                1 - roc_auc_score(s[:, s_column]==s_value, y_prob)
-            ) if (len(np.unique(s[:, s_column]))>1) else 1
-                for s_column in range(s.shape[1])
-                    for s_value in np.unique(s[:, s_column])
-        ]
-    )
+        
+    demographic_parities = []
+    for s_column in range(s.shape[1]):
+        if len(np.unique(s[:, s_column]))==1:
+            demographic_parities.append(1) 
+        
+        else:
+            dem_par = 0
+            for s_unique in np.unique(s[:, s_column]):
+                s_cond_0 = (s[:, s_column]==s_unique)
+                s_cond_1 = (s[:, s_column]!=s_unique)
+
+                dem_par = max(
+                    dem_par, 
+                    abs(
+                        (s_cond_0 & (y_pred==1)).sum() / s_cond_0.sum() - \
+                        (s_cond_1 & (y_pred==1)).sum() / s_cond_1.sum()
+                    )
+                )
+
+            demographic_parities.append(dem_par)
+        
+    return demographic_parities
+
+def equal_opportunity_score(s, y_true, y_pred):
+    s = np.array(s)
+    if len(s.shape)==1:
+        s = s.reshape(-1,1)
     
+    equal_opportunities = []
+    for s_column in range(s.shape[1]):
+        if len(np.unique(s[:, s_column]))==1:
+            equal_opportunities.append(1) 
+        else:
+            eq_op = 0
+            for s_unique in np.unique(s[:, s_column]):
+                s_cond_0 = (s[:, s_column]==s_unique)
+                s_cond_1 = (s[:, s_column]!=s_unique)
+
+                tn_s_0, fp_s_0, fn_s_0, tp_s_0 = confusion_matrix(y_true[s_cond_0], y_pred[s_cond_0]).ravel()
+                tn_s_1, fp_s_1, fn_s_1, tp_s_1 = confusion_matrix(y_true[s_cond_1], y_pred[s_cond_1]).ravel()
+
+                tpr_s_0 = tp_s_0 / (tp_s_0 + fn_s_0)
+                tpr_s_1 = tp_s_1 / (tp_s_1 + fn_s_1)
+
+                eq_op = max(eq_op, abs(tpr_s_0 - tpr_s_1))
+
+            equal_opportunities.append(eq_op)
+            
+    return equal_opportunities
+
+def equalized_odds_score(s, y_true, y_pred):
+    s = np.array(s)
+    if len(s.shape)==1:
+        s = s.reshape(-1,1)
+    
+    equalized_odds = []
+    for s_column in range(s.shape[1]):
+        if len(np.unique(s[:, s_column]))==1:
+            equalized_odds.append(1) 
+        else:
+            eq_odds = 0
+            for s_unique in np.unique(s[:, s_column]):
+                s_cond_0 = (s[:, s_column]==s_unique)
+                s_cond_1 = (s[:, s_column]!=s_unique)
+
+                tn_s_0, fp_s_0, fn_s_0, tp_s_0 = confusion_matrix(y_true[s_cond_0], y_pred[s_cond_0]).ravel()
+                tn_s_1, fp_s_1, fn_s_1, tp_s_1 = confusion_matrix(y_true[s_cond_1], y_pred[s_cond_1]).ravel()
+
+                tpr_s_0 = tp_s_0 / (tp_s_0 + fn_s_0)
+                tpr_s_1 = tp_s_1 / (tp_s_1 + fn_s_1)
+                
+                fpr_s_0 = fp_s_0 / (fp_s_0 + tn_s_0)
+                fpr_s_1 = fp_s_1 / (fp_s_1 + tn_s_1)
+                
+                eq_odds = max(eq_odds, abs(abs(tpr_s_0-tpr_s_1) - abs(fpr_s_0-fpr_s_1)))
+
+            equalized_odds.append(eq_odds)
+            
+    return equalized_odds
+
+def sensitive_auc_score(s, y_prob):
+    s = np.array(s)
+    if len(s.shape)==1:
+        s = s.reshape(-1,1)
+    
+    sensitive_aucs = []
+    for s_column in range(s.shape[1]):
+        if len(np.unique(s[:, s_column]))==1:
+            sensitive_aucs.append(1) 
+        else:
+            sens_auc = 0
+            for s_unique in np.unique(s[:, s_column]):
+                s_bool = (s[:, s_column]==s_unique)
+                auc = roc_auc_score(s_bool, y_prob)
+                auc = max(1-auc, auc)
+                sens_auc = max(sens_auc, auc)
+            sensitive_aucs.append(sens_auc)
+    
+    return sensitive_aucs
+
 class FairDecisionTreeClassifier():
     def __init__(
         self,
@@ -328,7 +414,7 @@ class FairDecisionTreeClassifier():
 
                 return score
             
-        # return best (sscore, feature, split_value) dependant on criterion and indexs
+        # return best (score, feature, split_value) dependant on criterion and indexs
         def get_best_split(indexs):
             best_score = 0
             best_value = np.nan
@@ -351,7 +437,7 @@ class FairDecisionTreeClassifier():
         
             return best_score, best_feature, best_value
         
-        # recursively grow the actual tree ---> {split1: {...}}
+        # recursively grow the actual tree
         def build_tree(indexs, depth=0):
             tree={}
             if (                
