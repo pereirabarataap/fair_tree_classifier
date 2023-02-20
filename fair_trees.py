@@ -8,6 +8,7 @@ from sklearn.preprocessing import OneHotEncoder
 from sklearn.metrics import roc_auc_score, confusion_matrix
 
 def demographic_parity_score(s, y_pred):
+    y_pred = np.array(y_pred).ravel()
     s = np.array(s)
     if len(s.shape)==1:
         s = s.reshape(-1,1)
@@ -33,9 +34,12 @@ def demographic_parity_score(s, y_pred):
 
             demographic_parities.append(dem_par)
         
-    return demographic_parities
+    return demographic_parities[0] if len(demographic_parities)==1 else demographic_parities
 
 def equal_opportunity_score(s, y_true, y_pred):
+    y_true = np.array(y_true).ravel()
+    y_pred = np.array(y_pred).ravel()
+    
     s = np.array(s)
     if len(s.shape)==1:
         s = s.reshape(-1,1)
@@ -50,8 +54,8 @@ def equal_opportunity_score(s, y_true, y_pred):
                 s_cond_0 = (s[:, s_column]==s_unique)
                 s_cond_1 = (s[:, s_column]!=s_unique)
 
-                tn_s_0, fp_s_0, fn_s_0, tp_s_0 = confusion_matrix(y_true[s_cond_0], y_pred[s_cond_0]).ravel()
-                tn_s_1, fp_s_1, fn_s_1, tp_s_1 = confusion_matrix(y_true[s_cond_1], y_pred[s_cond_1]).ravel()
+                tn_s_0, fp_s_0, fn_s_0, tp_s_0 = confusion_matrix(y_true[s_cond_0], y_pred[s_cond_0], labels=[0,1]).ravel()
+                tn_s_1, fp_s_1, fn_s_1, tp_s_1 = confusion_matrix(y_true[s_cond_1], y_pred[s_cond_1], labels=[0,1]).ravel()
 
                 tpr_s_0 = tp_s_0 / (tp_s_0 + fn_s_0)
                 tpr_s_1 = tp_s_1 / (tp_s_1 + fn_s_1)
@@ -60,9 +64,12 @@ def equal_opportunity_score(s, y_true, y_pred):
 
             equal_opportunities.append(eq_op)
             
-    return equal_opportunities
+    return equal_opportunities[0] if len(equal_opportunities)==1 else equal_opportunities
 
 def equalized_odds_score(s, y_true, y_pred):
+    y_true = np.array(y_true).ravel()
+    y_pred = np.array(y_pred).ravel()
+    
     s = np.array(s)
     if len(s.shape)==1:
         s = s.reshape(-1,1)
@@ -77,8 +84,8 @@ def equalized_odds_score(s, y_true, y_pred):
                 s_cond_0 = (s[:, s_column]==s_unique)
                 s_cond_1 = (s[:, s_column]!=s_unique)
 
-                tn_s_0, fp_s_0, fn_s_0, tp_s_0 = confusion_matrix(y_true[s_cond_0], y_pred[s_cond_0]).ravel()
-                tn_s_1, fp_s_1, fn_s_1, tp_s_1 = confusion_matrix(y_true[s_cond_1], y_pred[s_cond_1]).ravel()
+                tn_s_0, fp_s_0, fn_s_0, tp_s_0 = confusion_matrix(y_true[s_cond_0], y_pred[s_cond_0], labels=[0,1]).ravel()
+                tn_s_1, fp_s_1, fn_s_1, tp_s_1 = confusion_matrix(y_true[s_cond_1], y_pred[s_cond_1], labels=[0,1]).ravel()
 
                 tpr_s_0 = tp_s_0 / (tp_s_0 + fn_s_0)
                 tpr_s_1 = tp_s_1 / (tp_s_1 + fn_s_1)
@@ -90,9 +97,10 @@ def equalized_odds_score(s, y_true, y_pred):
 
             equalized_odds.append(eq_odds)
             
-    return equalized_odds
+    return equalized_odds[0] if len(equalized_odds)==1 else equalized_odds
 
 def sensitive_auc_score(s, y_prob):
+    y_prob = np.array(y_prob)
     s = np.array(s)
     if len(s.shape)==1:
         s = s.reshape(-1,1)
@@ -110,7 +118,7 @@ def sensitive_auc_score(s, y_prob):
                 sens_auc = max(sens_auc, auc)
             sensitive_aucs.append(sens_auc)
     
-    return sensitive_aucs
+    return sensitive_aucs[0] if len(sensitive_aucs)==1 else sensitive_aucs
 
 class FairDecisionTreeClassifier():
     def __init__(
