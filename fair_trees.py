@@ -110,11 +110,11 @@ def equalized_odds_score(s, y_true, y_pred):
                     eq_odds = np.nan
                     break
                     
-                if (neg_s_0==0) and (neg_s_1==0):
+                elif (neg_s_0==0) and (neg_s_1==0):
                     eq_odds = np.nan
                     break
                 
-                if (
+                elif (
                     ((pos_s_0>0) and (pos_s_1==0)) or \
                     ((pos_s_0==0) and (pos_s_1>1)) or \
                     ((neg_s_0>0) and (neg_s_1==0)) or \
