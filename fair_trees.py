@@ -23,7 +23,7 @@ def demographic_parity_score(s, y_pred):
             for s_unique in np.unique(s[:, s_column]):
                 s_cond_0 = (s[:, s_column]==s_unique)
                 s_cond_1 = (s[:, s_column]!=s_unique)
-
+                
                 dem_par = max(
                     dem_par, 
                     abs(
@@ -56,11 +56,25 @@ def equal_opportunity_score(s, y_true, y_pred):
 
                 tn_s_0, fp_s_0, fn_s_0, tp_s_0 = confusion_matrix(y_true[s_cond_0], y_pred[s_cond_0], labels=[0,1]).ravel()
                 tn_s_1, fp_s_1, fn_s_1, tp_s_1 = confusion_matrix(y_true[s_cond_1], y_pred[s_cond_1], labels=[0,1]).ravel()
-
-                tpr_s_0 = tp_s_0 / (tp_s_0 + fn_s_0)
-                tpr_s_1 = tp_s_1 / (tp_s_1 + fn_s_1)
-
-                eq_op = max(eq_op, abs(tpr_s_0 - tpr_s_1))
+                
+                pos_s_0 = (tp_s_0 + fn_s_0)
+                pos_s_1 = (tp_s_1 + fn_s_1)
+                
+                if (pos_s_0==0) and (pos_s_1==0):
+                    eq_op = np.nan
+                    break
+                    
+                elif (
+                    ((pos_s_0>0) and (pos_s_1==0)) or \
+                    ((pos_s_0==0) and (pos_s_1>1))
+                ):
+                    eq_op = 1
+                    break
+                
+                else:
+                    tpr_s_0 = tp_s_0 / pos_s_0
+                    tpr_s_1 = tp_s_1 / pos_s_1
+                    eq_op = max(eq_op, abs(tpr_s_0 - tpr_s_1))
 
             equal_opportunities.append(eq_op)
             
@@ -86,14 +100,35 @@ def equalized_odds_score(s, y_true, y_pred):
 
                 tn_s_0, fp_s_0, fn_s_0, tp_s_0 = confusion_matrix(y_true[s_cond_0], y_pred[s_cond_0], labels=[0,1]).ravel()
                 tn_s_1, fp_s_1, fn_s_1, tp_s_1 = confusion_matrix(y_true[s_cond_1], y_pred[s_cond_1], labels=[0,1]).ravel()
-
-                tpr_s_0 = tp_s_0 / (tp_s_0 + fn_s_0)
-                tpr_s_1 = tp_s_1 / (tp_s_1 + fn_s_1)
                 
-                fpr_s_0 = fp_s_0 / (fp_s_0 + tn_s_0)
-                fpr_s_1 = fp_s_1 / (fp_s_1 + tn_s_1)
+                pos_s_0 = (tp_s_0 + fn_s_0)
+                pos_s_1 = (tp_s_1 + fn_s_1)
+                neg_s_0 = (tn_s_0 + fp_s_0)
+                neg_s_1 = (tn_s_1 + fp_s_1)
                 
-                eq_odds = max(eq_odds, abs(abs(tpr_s_0-tpr_s_1) - abs(fpr_s_0-fpr_s_1)))
+                if (pos_s_0==0) and (pos_s_1==0):
+                    eq_odds = np.nan
+                    break
+                    
+                if (neg_s_0==0) and (neg_s_1==0):
+                    eq_odds = np.nan
+                    break
+                
+                if (
+                    ((pos_s_0>0) and (pos_s_1==0)) or \
+                    ((pos_s_0==0) and (pos_s_1>1)) or \
+                    ((neg_s_0>0) and (neg_s_1==0)) or \
+                    ((neg_s_0==0) and (neg_s_1>1))
+                ):
+                    eq_odds = 1
+                    break
+        
+                else:
+                    tpr_s_0 = tp_s_0 / pos_s_0
+                    tpr_s_1 = tp_s_1 / pos_s_1
+                    fpr_s_0 = fp_s_0 / neg_s_0
+                    fpr_s_1 = fp_s_1 / neg_s_1
+                    eq_odds = max(eq_odds, abs(abs(tpr_s_0-tpr_s_1) - abs(fpr_s_0-fpr_s_1)))
 
             equalized_odds.append(eq_odds)
             
