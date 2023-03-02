@@ -306,7 +306,7 @@ class FairDecisionTreeClassifier():
             ), axis= 1
         )
         
-        if self.oob_pruning and self.criterion=="scaff":
+        if self.oob_pruning and self.criterion=="scaff" and ((self.sampling_proportion!=1.0) or (self.bootstrap)):
             self.X_validation = self.X_validation[self.features]
             categorical_part_val = self.X_validation.select_dtypes(exclude=numerics)
             numeric_part_val = self.X_validation.select_dtypes(include=numerics)
