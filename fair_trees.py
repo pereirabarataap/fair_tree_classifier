@@ -587,7 +587,7 @@ class FairDecisionTreeClassifier():
 
             y_prob = get_prob(self.X_validation, self.tree)
             auc_y = roc_auc_score(self.y_validation, y_prob) 
-            auc_s = sensitive_auc(self.s_validation, y_prob) 
+            auc_s = sensitive_auc_score(self.s_validation, y_prob) 
             best_score = (1-self.orthogonality)*auc_y - self.orthogonality*auc_s
             
             stop_flag = 0     
@@ -611,7 +611,7 @@ class FairDecisionTreeClassifier():
                         exec(str_path + " = " + str(new_prob))
                         y_prob = get_prob(self.X_validation, sub_tree)
                         auc_y = roc_auc_score(self.y_validation, y_prob) 
-                        auc_s = sensitive_auc(self.s_validation, y_prob) 
+                        auc_s = sensitive_auc_score(self.s_validation, y_prob) 
                         new_score = (1-self.orthogonality)*auc_y - self.orthogonality*auc_s
                         if new_score > best_score:
                             best_score = new_score
