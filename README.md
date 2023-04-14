@@ -1,5 +1,8 @@
 # Fair Tree Classifier using Strong Demographic Parity
 
+## 3D Figures
+https://htmlpreview.github.io/?https://github.com/pereirabarataap/fair_tree_classifier/main/3d/index.html
+
 ## Usage
 ```python
 from fair_trees import *
