@@ -93,7 +93,8 @@ sb.lineplot(
 )
 plt.show()
 ```
-![Uploading output.png…]()
+![output](https://github.com/pereirabarataap/fair_tree_classifier/assets/15198092/b99d33db-f0c2-4715-84cd-d3af3808665b)
+
 
 ## 3D Figures
 https://htmlpreview.github.io/?https://github.com/pereirabarataap/fair_tree_classifier/main/3d/index.html
