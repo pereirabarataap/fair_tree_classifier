@@ -1,5 +1,4 @@
-# Fair tree classifier using strong demographic parity 
-<a href="https://link.springer.com/article/10.1007/s10994-023-06376-z" target="blank">[>>]</a>
+# Fair tree classifier using strong demographic parity <a href="https://link.springer.com/article/10.1007/s10994-023-06376-z" target="blank">[>>]</a>
 
 ## Requirements
 <code>pip install -r requirements.txt</code>
