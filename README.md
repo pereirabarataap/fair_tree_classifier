@@ -23,8 +23,8 @@ y = datasets["adult"]["y"]
 z = datasets["adult"]["z"]["gender"]
 
 clf = FRFC(theta=0.5).fit(X,y,z)
-y_prob = clf.predict_proba(X)
-print(sdp_sore(z, y_prob))
+y_prob = clf.predict_proba(X)[:,1]
+print(sdp_score(z, y_prob))
 ```
 ## Example
 ```python
