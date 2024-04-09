@@ -1,13 +1,28 @@
 import joblib
+import warnings
 import numpy as np
 import pandas as pd
 from math import sqrt, log2
 from collections import Counter
 from joblib import Parallel, delayed
+from sklearn.metrics import roc_auc_score
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.preprocessing import OneHotEncoder as OHE, KBinsDiscretizer as KBD
 
 pd.set_option("future.no_silent_downcasting", True)
+warnings.filterwarnings("ignore", category=UserWarning)
+
+def sdp_score(z_true, y_prob):
+    """
+    Strong Demographic Parity Score
+    Same API as roc_auc_score from sklean.metric
+    Returns a value between 0 and 1 in which:
+        0 indicates complete algorithmic bias,
+        1 indicates complete algorithmic fairness
+    """
+    sdp = roc_auc_score(z_true, y_prob)
+    sdp_score = 1 - (2*abs(sdp - 0.5))
+    return sdp_score
 
 def find_first_occurrence(l, x):
     """
@@ -334,9 +349,9 @@ class FairRandomForestClassifier(BaseEstimator, ClassifierMixin):
         random_state=42,
         orthogonality=0, 
         n_estimators=500,
-        max_features=None, 
         min_samples_leaf=1, 
         min_samples_split=2,
+        max_features="sqrt",
         requires_data_processing=True,
     ):
         # forest-specific
