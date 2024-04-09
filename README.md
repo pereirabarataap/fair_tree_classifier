@@ -87,8 +87,7 @@ sb.lineplot(
     data=results_df.groupby(by=["dataset", "theta"]).mean(),
     x="fairness",
     y="performance", 
-    hue="dataset",![output](https://github.com/pereirabarataap/fair_tree_classifier/assets/15198092/f3481f29-fa7a-4d59-af4a-1706a82c4e03)
-
+    hue="dataset",
     ax=ax
 )
 plt.show()
