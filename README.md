@@ -3,10 +3,6 @@
 ## Requirements
 <code>pip install -r requirements.txt</code>
 
-## 3D Figures
-https://htmlpreview.github.io/?https://github.com/pereirabarataap/fair_tree_classifier/main/3d/index.html
-
-
 ## Usage
 ```python
 import joblib
@@ -95,41 +91,5 @@ sb.lineplot(
 plt.show()
 ```
 
-## Reproducibility
-To reproduce the entirety of our experiments, simply run the <code>reproduce.ipynb</code> jupyter notebook in a Python environment.</br>
-Expected compute time: <code>24 hours</code> using <code>64 AMD EPYC 7601-kernen @ 2.40 GHz (128 threads)</code>.</br>
-Please run the following snippets prior to the run:
-
-<code>pip install openml;</code>
-
-<code>conda install tqdm --y;</code>
-
-<code>conda install numpy --y;</code>
-
-<code>conda install pandas --y;</code>
-
-<code>conda install plotly --y;</code>
-
-<code>conda install jupyter --y;</code>
-
-<code>conda install seaborn --y;</code>
-
-<code>conda install jupyterlab --y;</code>
-
-<code>conda install matplotlib --y;</code>
-
-<code>conda install ipywidgets --y;</code>
-
-<code>conda install scikit-learn --y;</code>
-
-<code>conda install -c conda-forge python-kaleido --y;</code>
-
-<code>conda install nodejs -c conda-forge --repodata-fn=repodata.json --y;</code>
-
-<code>jupyter nbextension enable --py widgetsnbextension;</code>
-
-<code>jupyter labextension install jupyterlab-plotly;</code>
-
-<code>jupyter labextension install @jupyter-widgets/jupyterlab-manager;</code>
-
-<code>jupyter labextension install @jupyter-widgets/jupyterlab-manager plotlywidget;</code>
+## 3D Figures
+https://htmlpreview.github.io/?https://github.com/pereirabarataap/fair_tree_classifier/main/3d/index.html
