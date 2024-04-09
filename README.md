@@ -31,13 +31,15 @@ for dataset in tqdm(datasets):
             row[y.name] + "".join([row[col] for col in z.columns]),
         axis=1
     ).values
-    for train_idx, test_idx in tqdm(skf.split(X,splitter_y), desc=f"dataset={dataset} | processing folds", leave=False):
+    desc_i = f"dataset={dataset} | processing folds"
+    for train_idx, test_idx in tqdm(skf.split(X,splitter_y), desc=desc_i, leave=False):
         
         X_train, X_test = X.loc[train_idx], X.loc[test_idx]
         y_train, y_test = y.loc[train_idx], y.loc[test_idx]
         z_train, z_test = z.loc[train_idx], z.loc[test_idx]
-        
-        for theta in tqdm(np.linspace(0,1,11).round(1), desc=f"fold={fold} | fitting thetas", leave=False):
+
+        desc_j = f"fold={fold} | fitting thetas"
+        for theta in tqdm(np.linspace(0,1,11).round(1), desc=desc_j, leave=False):
             clf = FRFC(
                 n_jobs=-1,
                 n_bins=256,
