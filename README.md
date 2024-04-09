@@ -1,7 +1,11 @@
 # Fair Tree Classifier using Strong Demographic Parity
 
+## Requirements
+<code>pip install -r requirements.txt</code>
+
 ## 3D Figures
 https://htmlpreview.github.io/?https://github.com/pereirabarataap/fair_tree_classifier/main/3d/index.html
+
 
 ## Usage
 ```python
