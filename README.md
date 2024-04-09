@@ -6,6 +6,19 @@
 ## Usage
 ```python
 import joblib
+from from fair_trees import *
+
+datasets = joblib.load("datasets.pkl")
+X = datasets[dataset]["X"]
+y = datasets[dataset]["y"]
+z = datasets[dataset]["z"]
+
+clf = FairRandomForestClassifier(orthogonality=0.5).fit(X,y,z)
+y_proba = clf.predict_proba(X)
+```
+## Example
+```python
+import joblib
 import numpy as np
 import pandas as pd
 import seaborn as sb
