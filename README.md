@@ -7,6 +7,8 @@ When incorporating <code>FairDecisionTreeClassifier</code> or <code>FairRandomFo
 ## Installation
 A) <code>pip install fair-trees==2.0</code>
 
+or
+
 B) <code>git clone https://github.com/pereirabarataap/fair_tree_classifier</code> + <code>pip install -r requirements.txt</code>
 
 ## Usage
