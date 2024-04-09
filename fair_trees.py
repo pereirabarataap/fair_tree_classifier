@@ -64,6 +64,37 @@ class Node:
         self.num_samples_per_class = num_samples_per_class
 
 class FairDecisionTreeClassifier(BaseEstimator, ClassifierMixin):
+    """
+    Fair Decision Tree Classifier using Strong Demographic Parity
+
+    Parameters:
+    - theta (float): 
+        Threshold for fairness constraint. 
+        Default is 0.
+    - n_bins (int): 
+        Number of bins to use for continuous feature binning. 
+        Default is 256.
+    - max_depth (int, optional):
+        The maximum depth of the trees. If None, trees grow until all leaves are pure. 
+        Default is None which equals np.inf.
+    - bootstrap (bool): 
+        Whether bootstrap samples are used when building trees. 
+        Default is False.
+    - random_state (int): 
+        Controls both the randomness of the bootstrapping of the samples for building trees and the feature sampling for splitting nodes. 
+        Default is 42.
+    - min_samples_leaf (int): 
+        The minimum number of samples required to be at a leaf node. 
+        Default is 1.
+    - min_samples_split (int): 
+        The minimum number of samples required to split an internal node. 
+        Default is 2.
+    - max_features (str, int, float, optional): 
+        The number (or relative frequency) of features to consider when looking for the best split; {None, int, float, "sqrt", "log2"}
+        Default is None which equals 1.0 (all features are used)
+    - requires_data_processing (bool): Flag indicating whether the input data requires preprocessing. 
+        Default is True.
+    """
     def __init__(
         self,
         theta=0,
@@ -74,7 +105,7 @@ class FairDecisionTreeClassifier(BaseEstimator, ClassifierMixin):
         max_features=None, 
         min_samples_leaf=1, 
         min_samples_split=2, 
-        requires_data_processing=False,
+        requires_data_processing=True,
     ):
         self.theta = theta
         self.n_bins=n_bins
@@ -340,6 +371,44 @@ class FairDecisionTreeClassifier(BaseEstimator, ClassifierMixin):
         return np.argmax(self.predict_proba(X), axis=1)
     
 class FairRandomForestClassifier(BaseEstimator, ClassifierMixin):
+    """
+    Fair Random Forest Classifier using Strong Demographic Parity
+
+    Parameters:
+    - theta (float): 
+        Threshold for fairness constraint. 
+        Default is 0.
+    - n_jobs (int): 
+        The number of jobs to run in parallel for both fit and predict. -1 means using all processors. 
+        Default is -1.
+    - n_bins (int): 
+        Number of bins to use for continuous feature binning. 
+        Default is 256.
+    - max_depth (int, optional):
+        The maximum depth of the trees. If None, trees grow until all leaves are pure. 
+        Default is None which equals np.inf.
+    - bootstrap (bool): 
+        Whether bootstrap samples are used when building trees. 
+        Default is True.
+    - random_state (int): 
+        Controls both the randomness of the bootstrapping of the samples for building trees and the feature sampling for splitting nodes. 
+        Default is 42.
+    - n_estimators (int): 
+        The number of trees in the forest. 
+        Default is 500.
+    - min_samples_leaf (int): 
+        The minimum number of samples required to be at a leaf node. 
+        Default is 1.
+    - min_samples_split (int): 
+        The minimum number of samples required to split an internal node. 
+        Default is 2.
+    - max_features (str, int, float, optional): 
+        The number (or relative frequency) of features to consider when looking for the best split; {None, int, float, "sqrt", "log2"}
+        Default is "sqrt"
+    - requires_data_processing (bool): Flag indicating whether the input data requires preprocessing. 
+        Default is True.
+    """
+    
     def __init__(
         self, 
         theta=0,
@@ -381,6 +450,7 @@ class FairRandomForestClassifier(BaseEstimator, ClassifierMixin):
             max_depth=self.max_depth,
             bootstrap=self.bootstrap,
             max_features=self.max_features,
+            requires_data_processing=False,
             min_samples_leaf=self.min_samples_leaf,
             min_samples_split=self.min_samples_split,
         ) for i in range(n_estimators)]
