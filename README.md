@@ -9,9 +9,9 @@ import joblib
 from from fair_trees import *
 
 datasets = joblib.load("datasets.pkl")
-X = datasets["adult]["X"]
-y = datasets["adult]["y"]
-z = datasets["adult]["z"]["gender"]
+X = datasets["adult"]["X"]
+y = datasets["adult"]["y"]
+z = datasets["adult"]["z"]["gender"]
 
 clf = FairRandomForestClassifier(orthogonality=0.5).fit(X,y,z)
 y_proba = clf.predict_proba(X)
