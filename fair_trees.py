@@ -66,21 +66,21 @@ class Node:
 class FairDecisionTreeClassifier(BaseEstimator, ClassifierMixin):
     def __init__(
         self,
+        theta=0,
         n_bins=256,
         max_depth=None,
         bootstrap=False,
         random_state=42,
-        orthogonality=0, 
         max_features=None, 
         min_samples_leaf=1, 
         min_samples_split=2, 
         requires_data_processing=False,
     ):
+        self.theta = theta
         self.n_bins=n_bins
         self.bootstrap = bootstrap
         self.max_features = max_features
         self.random_state = random_state
-        self.orthogonality = orthogonality
         self.min_samples_leaf = min_samples_leaf
         self.min_samples_split = min_samples_split
         self.requires_data_processing = requires_data_processing
@@ -90,7 +90,7 @@ class FairDecisionTreeClassifier(BaseEstimator, ClassifierMixin):
             self.max_depth = max_depth
             
         np.random.seed(self.random_state)
-        self.parent_scaff = (1-self.orthogonality)*0.5 - self.orthogonality*0.5
+        self.parent_scaff = (1-self.theta)*0.5 - self.theta*0.5
 
     def _get_max_features(self, n_features):
         if self.max_features is None:
@@ -198,7 +198,7 @@ class FairDecisionTreeClassifier(BaseEstimator, ClassifierMixin):
                                 
                 auc_z = auc_z_max
                     
-                scaff = ((1-self.orthogonality)*auc_y) - (self.orthogonality*auc_z)
+                scaff = ((1-self.theta)*auc_y) - (self.theta*auc_z)
                 split_score = (scaff - self.parent_scaff)
               
                 if split_score > best_split_score:
@@ -342,12 +342,12 @@ class FairDecisionTreeClassifier(BaseEstimator, ClassifierMixin):
 class FairRandomForestClassifier(BaseEstimator, ClassifierMixin):
     def __init__(
         self, 
+        theta=0,
         n_jobs=-1, 
         n_bins=256,
         max_depth=None, 
         bootstrap=True,
         random_state=42,
-        orthogonality=0, 
         n_estimators=500,
         min_samples_leaf=1, 
         min_samples_split=2,
@@ -358,11 +358,11 @@ class FairRandomForestClassifier(BaseEstimator, ClassifierMixin):
         self.n_jobs = n_jobs
         self.n_estimators = n_estimators
         # tree-specific
+        self.theta = theta
         self.n_bins=n_bins
         self.bootstrap = bootstrap
         self.max_features = max_features
         self.random_state = random_state
-        self.orthogonality = orthogonality
         self.min_samples_leaf = min_samples_leaf
         self.min_samples_split = min_samples_split
         self.requires_data_processing = requires_data_processing
@@ -375,12 +375,12 @@ class FairRandomForestClassifier(BaseEstimator, ClassifierMixin):
         
         base_rs = np.random.randint(1, 1e9)
         self.trees = [FairDecisionTreeClassifier(
+            theta=self.theta,
             n_bins=self.n_bins,
             random_state=base_rs+i,
             max_depth=self.max_depth,
             bootstrap=self.bootstrap,
             max_features=self.max_features,
-            orthogonality=self.orthogonality,
             min_samples_leaf=self.min_samples_leaf,
             min_samples_split=self.min_samples_split,
         ) for i in range(n_estimators)]
