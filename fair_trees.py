@@ -4,8 +4,9 @@ import numpy as np
 import pandas as pd
 from math import sqrt, log2
 from collections import Counter
+from scipy.optimize import minimize
 from joblib import Parallel, delayed
-from sklearn.metrics import roc_auc_score
+from sklearn.metrics import roc_auc_score, f1_score
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.preprocessing import OneHotEncoder as OHE, KBinsDiscretizer as KBD
 
@@ -321,10 +322,39 @@ class FairDecisionTreeClassifier(BaseEstimator, ClassifierMixin):
         
         return X
     
+    def _optimize_function(self, func, initial_x, *args):
+        """
+        Optimizes the given function to find the value of x that maximizes it.
+
+        Parameters:
+            func: A function that takes arbitrary arguments and a parameter x at the end, and returns a number.
+            initial_x: An initial guess for the value of x.
+            *args: Arbitrary arguments that will be passed to func before the parameter x.
+
+        Returns:
+            The value of x that maximizes the function.
+        """
+        # Define a wrapper function that negates the output of the original function
+        # This is because we are using a minimization function to perform maximization
+        def neg_func(x, *args):
+            return -f1_score(args[0], args[1]>=x)
+
+        # Use the Nelder-Mead method to minimize the negative of the function
+        res = minimize(neg_func, initial_x, args=args, method='Nelder-Mead')
+        return (res.x)[0]
+
+    def _prediction_threshold(self, X, y):
+        """
+        Returns the optimal decision threshold which maximises the f1_score on the training set
+        """
+        y_prob = self.predict_proba(X)[:,1]
+        return self._optimize_function(f1_score, min(y_prob), y, y_prob)
+    
     def fit(self, X, y, z=None):
         
         if self.requires_data_processing:
             X, y, z = self._prepare_input_fit(X, y, z)
+        
         
         self.classes_ = np.unique(y)
         self.n_classes_ = len(np.unique(y))
@@ -341,6 +371,15 @@ class FairDecisionTreeClassifier(BaseEstimator, ClassifierMixin):
             X, y, z = X[resample_idx], y[resample_idx], z[resample_idx]
         
         self.tree_ = self._grow_tree(X, y, z)
+        
+        if self.requires_data_processing:
+            # was already processed
+            self.requires_data_processing = False
+            self.prediction_threshold = self._prediction_threshold(X, y)
+            self.requires_data_processing = True
+        else:
+            self.prediction_threshold = self._prediction_threshold(X, y)
+            
         return self
         
     def _predict_proba(self, node, X):
@@ -368,7 +407,9 @@ class FairDecisionTreeClassifier(BaseEstimator, ClassifierMixin):
         return self._predict_proba(self.tree_, X)
 
     def predict(self, X):
-        return np.argmax(self.predict_proba(X), axis=1)
+        y_proba = self.predict_proba(X)
+        predictions = (y_proba[:,1] >= self.prediction_threshold).astype(int)
+        return predictions
     
 class FairRandomForestClassifier(BaseEstimator, ClassifierMixin):
     """
@@ -516,11 +557,39 @@ class FairRandomForestClassifier(BaseEstimator, ClassifierMixin):
         
         return X
     
+    def _optimize_function(self, func, initial_x, *args):
+        """
+        Optimizes the given function to find the value of x that maximizes it.
+
+        Parameters:
+            func: A function that takes arbitrary arguments and a parameter x at the end, and returns a number.
+            initial_x: An initial guess for the value of x.
+            *args: Arbitrary arguments that will be passed to func before the parameter x.
+
+        Returns:
+            The value of x that maximizes the function.
+        """
+        # Define a wrapper function that negates the output of the original function
+        # This is because we are using a minimization function to perform maximization
+        def neg_func(x, *args):
+            return -f1_score(args[0], args[1]>=x)
+
+        # Use the Nelder-Mead method to minimize the negative of the function
+        res = minimize(neg_func, initial_x, args=args, method='Nelder-Mead')
+        return (res.x)[0]
+
+    def _prediction_threshold(self, X, y):
+        """
+        Returns the optimal decision threshold which maximises the f1_score on the training set
+        """
+        y_prob = self.predict_proba(X)[:,1]
+        return self._optimize_function(f1_score, min(y_prob), y, y_prob)
+    
     def fit(self, X, y, z):
         
         if self.requires_data_processing:
             X, y, z = self._prepare_input_fit(X, y, z)
-            
+          
         self.classes_ = np.unique(y)
         # Determine the number of jobs
         n_jobs = self.n_jobs if self.n_jobs > 0 else joblib.cpu_count()
@@ -534,12 +603,21 @@ class FairRandomForestClassifier(BaseEstimator, ClassifierMixin):
         
         # Flatten the list of trees
         self.fitted_trees = [tree for batch in trees_batches for tree in batch]
+        
+        if self.requires_data_processing:
+            # was already processed
+            self.requires_data_processing = False
+            self.prediction_threshold = self._prediction_threshold(X, y)
+            self.requires_data_processing = True
+        else:
+            self.prediction_threshold = self._prediction_threshold(X, y)
+            
         return self
     
     def predict(self, X):
-        predictions = np.array([tree.predict(X) for tree in self.fitted_trees])
-        mode_pred, _ = st.mode(predictions, axis=0)
-        return mode_pred.ravel()
+        y_proba = self.predict_proba(X)
+        predictions = (y_proba[:,1] >= self.prediction_threshold).astype(int)
+        return predictions
         
     def predict_proba(self, X):
         if self.requires_data_processing:
