@@ -1,4 +1,4 @@
-# Fair Tree Classifier using Strong Demographic Parity [["]](https://link.springer.com/article/10.1007/s10994-023-06376-z)
+# Fair Tree Classifier using Strong Demographic Parity [[>>]](https://link.springer.com/article/10.1007/s10994-023-06376-z)
 
 ## Requirements
 <code>pip install -r requirements.txt</code>
