@@ -1,0 +1,10 @@
+LICENSE
+README.md
+setup.py
+fair_trees/__init__.py
+fair_trees/fair_trees.py
+fair_trees.egg-info/PKG-INFO
+fair_trees.egg-info/SOURCES.txt
+fair_trees.egg-info/dependency_links.txt
+fair_trees.egg-info/requires.txt
+fair_trees.egg-info/top_level.txt

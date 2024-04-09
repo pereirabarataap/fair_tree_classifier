@@ -2,31 +2,32 @@
 
 This package learns fair decision tree classifiers which can then be bagged into fair random forests, following the scikit-learn API standards.
 
-When incorporating <code>FairDecisionTreeClassifier</code> or <code>FairRandomForestClassifier</code> objects into scikit-learn pipelines,<br>use the <code>fit_params={"z": z}</code> parameter to pass the sensitive attribute(s) <code>z</code>
+When incorporating <code>FairDecisionTreeClassifier</code> or <code>FairRandomForestClassifier</code> objects into scikit-learn pipelines, use the <code>fit_params={"z": z}</code> parameter to pass the sensitive attribute(s) <code>z</code>
 
 ## Installation
-A) <code>pip install fair-trees==2.0</code>
+A)<br>
+<code>pip install fair-trees</code>
 
 or
 
-B) <code>git clone https://github.com/pereirabarataap/fair_tree_classifier</code> + <code>pip install -r requirements.txt</code>
+B)<br>
+<code>git clone https://github.com/pereirabarataap/fair_tree_classifier</code><br><code>pip install -r requirements.txt</code>
 
 ## Usage
 ```python
-import joblib
-from fair_trees import *
+from fair_trees import FairRandomForestClassifier as FRFC, load_datasets, sdp_score
 
-datasets = joblib.load("datasets.pkl")
+datasets = load_datasets()
 X = datasets["adult"]["X"]
 y = datasets["adult"]["y"]
 z = datasets["adult"]["z"]["gender"]
 
-clf = FairRandomForestClassifier(theta=0.5).fit(X,y,z)
-y_proba = clf.predict_proba(X)
+clf = FRFC(theta=0.5).fit(X,y,z)
+y_prob = clf.predict_proba(X)
+print(sdp_sore(z, y_prob))
 ```
 ## Example
 ```python
-import joblib
 import numpy as np
 import pandas as pd
 import seaborn as sb
@@ -34,9 +35,9 @@ from tqdm.notebook import tqdm
 from matplotlib import pyplot as plt
 from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import StratifiedKFold as SKF
-from fair_trees import FairRandomForestClassifier as FRFC, sdp_score
+from fair_trees import FairRandomForestClassifier as FRFC, sdp_score, load_datasets
 
-datasets = joblib.load("datasets.pkl")
+datasets = load_datasets()
 
 results_data = []
 for dataset in tqdm(datasets):
