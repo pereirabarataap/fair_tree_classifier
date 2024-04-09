@@ -4,10 +4,10 @@ This package learns fair decision tree classifiers which can then be bagged into
 
 When incorporating <code>FairDecisionTreeClassifier</code> or <code>FairRandomForestClassifier</code> objects into scikit-learn pipelines,<br>use the <code>fit_params={"z": z}</code> parameter to pass the sensitive attribute(s) <code>z</code>
 
-## Requirements
-<code>git clone https://github.com/pereirabarataap/fair_tree_classifier</code>
+## Installation
+A) <code>pip install fair-trees==2.0</code>
 
-<code>pip install -r requirements.txt</code>
+B) <code>git clone https://github.com/pereirabarataap/fair_tree_classifier</code> + <code>pip install -r requirements.txt</code>
 
 ## Usage
 ```python
