@@ -8,9 +8,9 @@ https://htmlpreview.github.io/?https://github.com/pereirabarataap/fair_tree_clas
 from fair_trees import *
 from datasets import *
 
-X, y, s = get_recidivism_gender(show=False)
+X, y, z = get_recidivism_gender(show=False)
 
-# s ---> numpy array where each column must be 
+# z ---> numpy array where each column must be 
 #        a binary {0, 1} representation of each
 #        unique sensitive attribute value
 
@@ -18,11 +18,11 @@ clf = FairRandomForestClassifier(
     orthogonality=0.5
 )
 
-clf.fit(X, y, s)
+clf.fit(X, y, z)
 y_prob = clf.predict_proba(X)[:,1]
 
-y_auc = roc_auc_score(y, y_prob) # ---> classification auc
-s_auc = max(roc_auc_score(s, y_prob), 1 - roc_auc_score(s, y_prob)) # ---> sensitive auc
+auc_y = roc_auc_score(y, y_prob) # ---> classification auc
+auc_z = max(roc_auc_score(z, y_prob), 1 - roc_auc_score(z, y_prob)) # ---> sensitive auc
 ```
 
 ## Reproducibility
