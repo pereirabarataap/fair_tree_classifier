@@ -13,7 +13,7 @@ X = datasets["adult"]["X"]
 y = datasets["adult"]["y"]
 z = datasets["adult"]["z"]["gender"]
 
-clf = FairRandomForestClassifier(orthogonality=0.5).fit(X,y,z)
+clf = FairRandomForestClassifier(theta=0.5).fit(X,y,z)
 y_proba = clf.predict_proba(X)
 ```
 ## Example
@@ -56,13 +56,13 @@ for dataset in tqdm(datasets):
             clf = FRFC(
                 n_jobs=-1,
                 n_bins=256,
+                theta=theta,
                 max_depth=None,
                 bootstrap=True,
                 random_state=42,
                 n_estimators=500,
                 min_samples_leaf=1,
                 min_samples_split=2,
-                orthogonality=theta,
                 max_features="sqrt",
                 requires_data_processing=True
             ).fit(X_train, y_train, z_train)
