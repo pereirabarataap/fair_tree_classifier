@@ -8,7 +8,7 @@
 ## Usage
 ```python
 import joblib
-from from fair_trees import *
+from fair_trees import *
 
 datasets = joblib.load("datasets.pkl")
 X = datasets["adult"]["X"]
