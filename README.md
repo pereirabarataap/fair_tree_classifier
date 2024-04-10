@@ -1,4 +1,8 @@
-# Fair tree classifier using strong demographic parity <a href="https://link.springer.com/article/10.1007/s10994-023-06376-z" target="blank">[>>]</a>
+# Fair tree classifier using strong demographic parity 
+
+Implementation of the algorithm proposed in:<br>
+Pereira Barata, A., Takes, F.W., van den Herik, H.J. et al. Fair tree classifier using strong demographic parity. Machine Learning (2023).
+<a href="https://link.springer.com/article/10.1007/s10994-023-06376-z" target="blank">[>>]</a>
 
 This package learns fair decision tree classifiers which can then be bagged into fair random forests, following the scikit-learn API standards.
 
