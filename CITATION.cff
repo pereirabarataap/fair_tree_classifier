@@ -1,0 +1,29 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite the paper in which it was introduced."
+authors:
+- family-names: Pereira Barata
+  given-names: Antonio
+  orcid: "https://orcid.org/0000-0002-0540-7681"
+title: "fair_tree_classifier"
+version: 0.1
+date-released: 2023
+url: "https://github.com/pereirabarataap/fair_tree_classifier"
+preferred-citation:
+  type: journal-paper
+  authors:
+  - family-names: Pereira Barata
+    given-names: Antonio
+    orcid: "https://orcid.org/0000-0002-0540-7681"
+  - family-names: Takes
+    given-names: Frank W.
+    orcid: "https://orcid.org/0000-0001-5468-1030"
+  - family-names: Herik
+    given-names: H. Jaap van den
+    orcid: "https://orcid.org/0000-0001-9751-761X"
+  - family-names: Veenman
+    given-names: Cor
+    orcid: "https://orcid.org/0000-0002-2645-1198"
+  doi: 10.1007/s10994-023-06376-z
+  journal: "Machine Learning"
+  title: "Fair tree classifier using strong demographic parity"
+  year: 2023
