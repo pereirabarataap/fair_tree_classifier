@@ -6,15 +6,16 @@ from math import sqrt, log2
 from collections import Counter
 from scipy.optimize import minimize
 from joblib import Parallel, delayed
+from importlib.resources import files
 from sklearn.metrics import roc_auc_score, f1_score
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.preprocessing import OneHotEncoder as OHE, KBinsDiscretizer as KBD
 
 pd.set_option("future.no_silent_downcasting", True)
-warnings.filterwarnings("ignore", category=UserWarning)
 
 def load_datasets():
-    return joblib.load("datasets.pkl")
+    pkl_path = files("fair_trees").joinpath("datasets.pkl")
+    return joblib.load(pkl_path)
 
 def sdp_score(z_true, y_prob):
     """
@@ -61,6 +62,7 @@ class Node:
         self.left = None
         self.right = None
         self.threshold = 0
+        self.score_gain = 0
         self.feature_index = 0
         self.num_samples = num_samples
         self.probabilities = probabilities  
@@ -243,11 +245,11 @@ class FairDecisionTreeClassifier(BaseEstimator, ClassifierMixin):
                         best_idx = idx
                         best_thr = threshold_b
                         best_split_score = split_score
-                
+                        
                 # updating threshold_index_a for next iteration
                 threshold_index_a = threshold_index_b       
 
-        return best_idx, best_thr
+        return best_idx, best_thr, best_split_score
     
     def _grow_tree(self, X, y, z, depth=0):
         num_samples_per_class = [np.sum(y == i) for i in range(self.n_classes_)]
@@ -262,16 +264,18 @@ class FairDecisionTreeClassifier(BaseEstimator, ClassifierMixin):
         )
      
         if depth < self.max_depth and y.size >= self.min_samples_split:
-            idx, thr = self._best_split(X, y, z)
+            idx, thr, split_score = self._best_split(X, y, z)
             if idx is not None:
                 indices_left = X[:, idx] < thr
                 X_left, y_left, z_left = X[indices_left], y[indices_left], z[indices_left]
                 X_right, y_right, z_right = X[~indices_left], y[~indices_left], z[~indices_left]
                 if len(y_left) >= self.min_samples_leaf and len(y_right) >= self.min_samples_leaf:
-                    node.feature_index = idx
                     node.threshold = thr
+                    node.feature_index = idx
+                    node.score_gain = split_score
                     node.left = self._grow_tree(X_left, y_left, z_left, depth + 1)
                     node.right = self._grow_tree(X_right, y_right, z_right, depth + 1)
+                    
         return node
     
     def _prepare_input_fit(self, X, y, z):
@@ -359,7 +363,6 @@ class FairDecisionTreeClassifier(BaseEstimator, ClassifierMixin):
         
         if self.requires_data_processing:
             X, y, z = self._prepare_input_fit(X, y, z)
-        
         
         self.classes_ = np.unique(y)
         self.n_classes_ = len(np.unique(y))
@@ -512,9 +515,57 @@ class FairRandomForestClassifier(BaseEstimator, ClassifierMixin):
             tree.fit(X, y, z)
             fitted_trees_batch.append(tree)
         return fitted_trees_batch
+
+    def _get_node_importances(self, node):
+        """
+        Recursively accumulates feature importance values from the decision tree nodes.
     
+        For each non-leaf node, computes the contribution to the feature importance as:
+            score_gain * num_samples_at_node
+    
+        This contribution is added to the corresponding original feature index in
+        `self.feature_importances_`, using the mapping from transformed to original indices
+        provided in `self.trans_to_ori_feat_idx_dict_`.
+    
+        Parameters:
+        -----------
+        node : Node
+            A node in the decision tree. Must have attributes:
+                - score_gain (float): The improvement in score from the split at this node.
+                - num_samples (int): The number of training samples at this node.
+                - feature_index (int): The index of the feature used to split at this node.
+                - left, right (Node or None): Child nodes for recursive traversal.
+    
+        Side Effects:
+        -------------
+        Updates `self.feature_importances_` in place.
+        """
+        if node is not None:
+            # Get the score gain (e.g. information gain or Gini decrease) from the split
+            gain = node.score_gain
+    
+            # Number of training samples at this node
+            n_samples = node.num_samples
+    
+            # Index of the feature used for the split in the transformed dataset
+            trans_feat_idx = node.feature_index
+    
+            # Convert to original feature index before transformation (e.g., one-hot decoding)
+            ori_feature_index = self.trans_to_ori_feat_idx_dict_[trans_feat_idx]
+    
+            # Add the contribution to the running total of feature importances
+            self.feature_importances_[ori_feature_index] += gain * n_samples
+    
+            # Recursively compute importances for child nodes
+            self._get_node_importances(node.left)
+            self._get_node_importances(node.right)
+            
     def _prepare_input_fit(self, X, y, z):
         X = pd.DataFrame(X)
+
+        self.feature_names_ = X.columns.values
+        self.feature_importances_ = np.zeros(X.shape[1])
+        
         self.kbd = KBD(n_bins=self.n_bins, encode="ordinal")
         self.ohe = OHE(sparse_output=False, handle_unknown="ignore")
         # splitting columns based on data type
@@ -535,6 +586,30 @@ class FairRandomForestClassifier(BaseEstimator, ClassifierMixin):
             X_concat_list.append(X[self.num_columns].values.astype(float))
         # concatenating X into numpy array
         X = np.concatenate(X_concat_list, axis=1)
+
+        self._trans_feature_importances_ = np.zeros(X.shape[1])
+        
+        # dict to map transformed_feature_idx ---> original_feature_index
+        self.trans_to_ori_feat_idx_dict_ = {}
+        trans_to_ori_counter = 0
+        if len(self.str_columns):
+            for str_column, str_values in zip(self.ohe.feature_names_in_, self.ohe.categories_):
+                ori_column_idx = np.argmax(self.feature_names_==str_column)
+                for i in range(len(str_values)):
+                    self.trans_to_ori_feat_idx_dict_[trans_to_ori_counter] = ori_column_idx
+                    trans_to_ori_counter += 1
+        
+        if len(self.bin_columns):
+            for bin_column in self.kbd.feature_names_in_:
+                ori_column_idx = np.argmax(self.feature_names_==bin_column)
+                self.trans_to_ori_feat_idx_dict_[trans_to_ori_counter] = ori_column_idx
+                trans_to_ori_counter += 1
+        
+        if len(self.num_columns):
+            for num_column in self.num_columns:
+                ori_column_idx = np.argmax(self.feature_names_==num_column)
+                self.trans_to_ori_feat_idx_dict_[trans_to_ori_counter] = ori_column_idx
+                trans_to_ori_counter += 1
         
         pre_vars = [y, z]
         for i in range(len(pre_vars)):
@@ -598,7 +673,10 @@ class FairRandomForestClassifier(BaseEstimator, ClassifierMixin):
         
         if self.requires_data_processing:
             X, y, z = self._prepare_input_fit(X, y, z)
-          
+        else:
+            self.feature_importances_ = np.zeros(X.shape[1])
+            self.trans_to_ori_feat_idx_dict_ = list(range(X.shape[1]))
+            
         self.classes_ = np.unique(y)
         # Determine the number of jobs
         n_jobs = self.n_jobs if self.n_jobs > 0 else joblib.cpu_count()
@@ -612,7 +690,16 @@ class FairRandomForestClassifier(BaseEstimator, ClassifierMixin):
         
         # Flatten the list of trees
         self.fitted_trees = [tree for batch in trees_batches for tree in batch]
+
+        # For each tree in the forest compute Feature Importance
+        for tree in self.fitted_trees:
+            node = tree.tree_
+            self._get_node_importances(node)
+        # Normalise feature importances to sum 1
         
+        self.feature_importances_ = self.feature_importances_ / self.feature_importances_.sum() \
+        if self.feature_importances_.sum() else self.feature_importances_
+                                   
         if self.generate_prediction_threshold:
             if self.requires_data_processing:
                 # was already processed
@@ -621,7 +708,7 @@ class FairRandomForestClassifier(BaseEstimator, ClassifierMixin):
                 self.requires_data_processing = True
             else:
                 self.prediction_threshold = self._prediction_threshold(X, y)
-            
+        
         return self
     
     def predict(self, X):
