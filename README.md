@@ -1,6 +1,6 @@
 # Fair tree classifier using strong demographic parity 
 
-Implementation of the algorithm proposed in:<br>
+This repository contains the bare-bones implementation, experiments, and results of the following publication:<br>
 > Pereira Barata, A. et al. _Fair tree classifier using strong demographic parity_. Machine Learning (2023).
 <a href="https://link.springer.com/article/10.1007/s10994-023-06376-z" target="blank">[>>]</a>
 
@@ -123,3 +123,4 @@ plt.show()
 
 ## 3D Figures
 https://htmlpreview.github.io/?https://github.com/pereirabarataap/fair_tree_classifier/main/3d/index.html
+
